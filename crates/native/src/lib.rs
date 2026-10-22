@@ -41,11 +41,18 @@ fn to_py_err(error: TrafilaturaError) -> PyErr {
     }
 }
 
+// `panic!("literal")` carries a `&'static str`, `panic!("{x}")` a `String`.
+fn panic_reason(payload: Box<dyn Any + Send>) -> String {
+    match payload.downcast::<String>() {
+        Ok(reason) => *reason,
+        Err(payload) => payload
+            .downcast_ref::<&'static str>()
+            .map_or_else(|| "unknown panic".to_string(), |reason| reason.to_string()),
+    }
+}
+
 fn panicked(payload: Box<dyn Any + Send>) -> PyErr {
-    let reason = payload
-        .downcast::<String>()
-        .unwrap_or_else(|_| Box::new("unknown panic".to_string()));
-    PyRuntimeError::new_err(format!("extraction panicked: {reason}"))
+    PyRuntimeError::new_err(format!("extraction panicked: {}", panic_reason(payload)))
 }
 
 fn detach<T: Send>(py: Python<'_>, work: impl FnOnce() -> T + Send) -> PyResult<T> {
@@ -328,12 +335,29 @@ fn extract_metadata_html(
 // ##### MODULE #####
 
 /// The version of the trafilatura-rs engine compiled into this extension.
+const ENGINE_VERSION: &str = env!("TRAFILATURA_ENGINE_VERSION");
+
+/// Private native bridge to the trafilatura-rs engine; use the public `etrafilatura` package.
 #[pymodule]
 fn _native(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(extract_html, m)?)?;
     m.add_function(wrap_pyfunction!(extract_metadata_html, m)?)?;
     m.add_class::<ExtractionResult>()?;
     m.add_class::<MetadataResult>()?;
-    m.add("ENGINE_VERSION", env!("TRAFILATURA_ENGINE_VERSION"))?;
+    m.add("ENGINE_VERSION", ENGINE_VERSION)?;
     Ok(())
+}
+
+// ##### TESTS #####
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn panic_reason_payloads() {
+        assert_eq!(panic_reason(Box::new(String::from("owned"))), "owned");
+        assert_eq!(panic_reason(Box::new("literal")), "literal");
+        assert_eq!(panic_reason(Box::new(7_u8)), "unknown panic");
+    }
 }

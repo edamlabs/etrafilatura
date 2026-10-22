@@ -19,7 +19,8 @@ concurrency:
 
 env:
   MAX_ATTEMPTS: 3
-  ALLOWED: ^(crates/native/src/|src/etrafilatura/|tests/|docs/|CHANGELOG\.md$|README\.md$)
+  # PCRE (grep -P): docs/fidelity.json is the regression baseline, never the agent's to move.
+  ALLOWED: ^(crates/native/src/|src/etrafilatura/|tests/|docs/(?!fidelity\.json$)|CHANGELOG\.md$|README\.md$)
 
 jobs:
   fix:
@@ -101,7 +102,7 @@ jobs:
           openai_api_key: ${{ secrets.SM_API_KEY }}
           openai_base_url: ${{ vars.SM_BASE_URL }}
           openai_model: ${{ vars.SM_MODEL }}
-          qwen_cli_version: ${{ vars.QWEN_CLI_VERSION || 'latest' }}
+          qwen_cli_version: ${{ vars.QWEN_CLI_VERSION || '0.26.0' }}
           prompt: |
             Follow QWEN.md strictly.
             Mode: ${{ steps.gate.outputs.mode }}
@@ -110,7 +111,7 @@ jobs:
             Context in .ai-context/:
               - upstream-context/versions.txt, api-added.txt, api-removed.txt, api-diff.txt, release-notes.md
               - ci-logs-*/build-test.log (one per OS and Python version)
-            Before finishing run: uv sync && SKIP=licenses,gitleaks uv run prek run --all-files && make test
+            Before finishing run: uv sync && SKIP=licenses,gitleaks uv run prek run --all-files && make build test
             Do NOT commit or push. End with the summary format defined in QWEN.md.
 
       - name: Commit and push
@@ -127,7 +128,8 @@ jobs:
         run: |
           rm -rf .ai-context .qwen qwen-artifacts
           git add -A
-          REJECTED=$(git diff --cached --name-only | grep -Ev "$ALLOWED" || true)
+          # --no-renames: a rename lists only its target, so `git mv pyproject.toml docs/x` would pass.
+          REJECTED=$(git diff --cached --name-only --no-renames | grep -Pv "$ALLOWED" || true)
           printf '🤖 **maintenance (%s)**\n\n%s\n' "$MODE" "$SUMMARY" > /tmp/body.md
           if [ -n "$REJECTED" ]; then
             printf '%s\n' "$REJECTED" | xargs git reset -q --

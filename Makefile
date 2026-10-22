@@ -1,4 +1,8 @@
-.PHONY: build build-release test lint format types arch check cargo-fmt clean dist stress integration suite publish docs serve cov licenses health apidiff fidelity benchmark
+.DEFAULT_GOAL := help
+.PHONY: help build build-release test lint format types arch check cargo-fmt clean dist stress integration suite publish docs serve cov licenses health apidiff fidelity benchmark
+
+help:             ## list targets
+	@awk 'BEGIN{FS=":.*## "} /^[a-z][a-zA-Z0-9_-]*:.*##/ {printf "  \033[32m%-14s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
 build:            ## compile native extension into the venv (debug)
 	uv run maturin develop

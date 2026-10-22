@@ -335,7 +335,6 @@ wheels = [
 
 [[package]]
 name = "etrafilatura"
-version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "charset-normalizer" },

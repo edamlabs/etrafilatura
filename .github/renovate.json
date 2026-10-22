@@ -7,7 +7,8 @@
   "enabledManagers": [
     "cargo",
     "pep621",
-    "github-actions"
+    "github-actions",
+    "custom.regex"
   ],
   "schedule": [
     "before 6am on monday"
@@ -17,8 +18,25 @@
   "abandonmentThreshold": "1 year",
   "rangeStrategy": "bump",
   "lockFileMaintenance": {
-    "enabled": false
+    "enabled": true,
+    "schedule": [
+      "before 6am on the first day of the month"
+    ]
   },
+  "customManagers": [
+    {
+      "description": "The agent's CLI pin, the default of QWEN_CLI_VERSION in the maintenance workflow.",
+      "customType": "regex",
+      "managerFilePatterns": [
+        "/^\\.github/workflows/maintenance\\.yml$/"
+      ],
+      "matchStrings": [
+        "QWEN_CLI_VERSION \\|\\| '(?<currentValue>\\d+\\.\\d+\\.\\d+)'"
+      ],
+      "depNameTemplate": "@qwen-code/qwen-code",
+      "datasourceTemplate": "npm"
+    }
+  ],
   "packageRules": [
     {
       "description": "requires-python is a support promise, not a dependency: never bumped by a bot.",
@@ -45,12 +63,13 @@
       "automerge": false
     },
     {
-      "description": "PyO3 shapes the binding itself: separate PRs, maintenance repairs breakage.",
+      "description": "PyO3 shapes the binding itself, url parses original_url in the bridge: separate PRs, maintenance repairs breakage.",
       "matchManagers": [
         "cargo"
       ],
       "matchPackageNames": [
-        "pyo3"
+        "pyo3",
+        "url"
       ],
       "labels": [
         "binding-update"
@@ -58,13 +77,46 @@
       "automerge": false
     },
     {
-      "description": "Python tooling: one weekly PR.",
+      "description": "Runtime deps of a library: widen the range, never raise the floor users resolve against; one PR each.",
       "matchManagers": [
         "pep621"
+      ],
+      "matchDepTypes": [
+        "project.dependencies"
+      ],
+      "rangeStrategy": "widen",
+      "labels": [
+        "runtime"
+      ]
+    },
+    {
+      "description": "Python tooling (dependency groups and the build backend): one weekly PR.",
+      "matchManagers": [
+        "pep621"
+      ],
+      "matchDepTypes": [
+        "dependency-groups",
+        "build-system.requires"
       ],
       "groupName": "python tooling",
       "labels": [
         "tooling"
+      ]
+    },
+    {
+      "description": "The reference Python trafilatura (bench group): a release moves the fidelity baseline, so its own PR at once.",
+      "matchManagers": [
+        "pep621"
+      ],
+      "matchPackageNames": [
+        "trafilatura"
+      ],
+      "groupName": null,
+      "schedule": [
+        "at any time"
+      ],
+      "labels": [
+        "reference-update"
       ]
     },
     {
