@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 5
 requires-python = ">=3.12"
 
 [[package]]
@@ -437,7 +437,7 @@ requires-dist = [
 [package.metadata.requires-dev]
 bench = [
     { name = "pytest-benchmark", specifier = ">=5.1" },
-    { name = "trafilatura", specifier = ">=2.3" },
+    { name = "trafilatura", specifier = ">=2.3.1" },
 ]
 build = [{ name = "maturin", specifier = ">=1.10" }]
 dev = [
@@ -453,7 +453,7 @@ dev = [
     { name = "pytest-timeout", specifier = ">=2.4" },
     { name = "ruff", specifier = ">=0.16" },
     { name = "tach", specifier = ">=0.30" },
-    { name = "trafilatura", specifier = ">=2.3" },
+    { name = "trafilatura", specifier = ">=2.3.1" },
     { name = "ty", specifier = ">=0.0.75" },
     { name = "types-lxml", specifier = ">=2026.2" },
     { name = "validate-pyproject", extras = ["all"], specifier = ">=0.26" },

@@ -57,7 +57,7 @@ test = [
     "brotli>=1.2",
 ]
 bench = [
-    "trafilatura>=2.3",
+    "trafilatura>=2.3.1",
     "pytest-benchmark>=5.1",
 ]
 build = [
