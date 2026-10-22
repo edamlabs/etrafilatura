@@ -8,9 +8,9 @@
 
 **Python binding of [trafilatura-rs](https://github.com/nchapman/trafilatura-rs)** — the pure-Rust engine by
 [nchapman](https://github.com/nchapman) that extracts the main text, comments and metadata of web pages,
-stripping boilerplate. 100 % API-compatible with [trafilatura](https://github.com/adbar/trafilatura): same
-signatures, same lxml trees, same output bytes (its renderers are vendored verbatim) — on a compiled engine,
-with three dependencies instead of seven. GIL released.
+stripping boilerplate, with [trafilatura](https://github.com/adbar/trafilatura)'s syntax: same signatures, same
+lxml trees in trafilatura's vocabulary, trafilatura's own renderers — on a compiled engine, with three
+dependencies instead of seven and the GIL released.
 
 📖 **Documentation: <https://edamlabs.github.io/etrafilatura/>**
 
@@ -27,6 +27,8 @@ trafilatura.extract(downloaded, output_format="markdown", with_metadata=True)
 trafilatura.extract(html_string)                       # 'txt' by default
 trafilatura.bare_extraction(html_string)               # Document with .text, .body, .comments…
 trafilatura.extract_metadata(html_string)              # title, author, date, sitename…
+
+trafilatura.extract("https://example.org/article", input_format="auto")   # extension: fetch, then extract
 ```
 
 **Benchmark** — pytest-benchmark medians against Python trafilatura over six documents (synthetic pages,
@@ -36,8 +38,10 @@ PEP 8 and a Wikipedia article): 1.2–2.2× faster extraction on real pages, up 
 
 ![etrafilatura vs trafilatura](https://raw.githubusercontent.com/edamlabs/etrafilatura/main/docs/assets/benchmark.svg)
 
-**Extraction agreement** — token-level agreement with Python trafilatura's output on the same corpus:
-94 % (txt), 93.8 % (markdown), 97.5 % (metadata) ([method](https://edamlabs.github.io/etrafilatura/outputs/#fidelity)).
+**Agreement with trafilatura** — on the synthetic test pages, 68 of 88 format cases are byte-identical and the
+other 20 are declared differences (tags, TEI version). On the eight-page corpus, real pages included, word-token
+agreement is 99.5 % (txt) and 99.6 % (markdown); the real pages differ by the engine's content selection
+([method](https://edamlabs.github.io/etrafilatura/outputs/#fidelity), [map](https://edamlabs.github.io/etrafilatura/compatibility/)).
 
 | | |
 |---|---|

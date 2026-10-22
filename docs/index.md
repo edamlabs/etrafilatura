@@ -15,9 +15,10 @@ downloaded = trafilatura.fetch_url("https://example.org/article")
 text = trafilatura.extract(downloaded, output_format="markdown", with_metadata=True)
 ```
 
-Same verbs, same keyword arguments, same `Document` and lxml trees, same output bytes, same
-`settings.cfg` as [trafilatura](https://trafilatura.readthedocs.io/) — on a compiled engine, with three
-dependencies (lxml, urllib3, charset-normalizer) instead of seven.
+Same verbs, keyword arguments, `Document` and lxml trees, renderers and `settings.cfg` as
+[trafilatura](https://trafilatura.readthedocs.io/), on a compiled engine and with three dependencies (lxml,
+urllib3, charset-normalizer) instead of seven. On the synthetic test pages the output is byte-identical in 68 of
+88 format cases; on real pages the engine selects slightly different content → [Compatibility](compatibility.md).
 
 | Call | Does |
 |---|---|
@@ -26,7 +27,7 @@ dependencies (lxml, urllib3, charset-normalizer) instead of seven.
 | `extract_with_metadata(html)` | Page → `Document`, metadata always included |
 | `extract_metadata(html)` | Page → metadata-only `Document` |
 | `fetch_url(url)` / `fetch_response(url)` | Download, decode, SSRF-guarded |
-| `load_html(source)` | Normalize str/bytes/path/Response to an HTML string |
+| `load_html(source)` | str/bytes/Response → lxml `HtmlElement` |
 | `baseline(html)` / `html2txt(html)` | Last-resort extraction / tag stripping |
 
 ## Why
@@ -43,7 +44,8 @@ certifi, and no native toolchain at install time: abi3 wheels for Linux, macOS a
 </div>
 <div markdown>
 ### Compatible
-Import it as trafilatura and keep your call sites: same signatures, same output formats, same configuration keys.
+Import it as trafilatura and keep your call sites: same signatures, output formats and configuration keys.
+Extensions are keyword-only, such as `input_format="auto"` to extract straight from a URL or a file.
 </div>
 </div>
 

@@ -135,8 +135,9 @@ error-on-warning = true
 
 [tool.pytest]
 minversion = "9.0"
-testpaths = ["tests"]
-addopts = ["--import-mode=importlib", "-ra", "-m", "not stress and not integration and not bench"]
+testpaths = ["tests", "docs"]
+addopts = ["--import-mode=importlib", "-ra", "-m", "not stress and not integration and not bench", "--doctest-glob=*.md"]
+doctest_optionflags = ["ELLIPSIS"]
 pythonpath = ["."]
 strict = true
 filterwarnings = ["error"]
