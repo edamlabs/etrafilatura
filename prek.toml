@@ -35,7 +35,7 @@ hooks = [
     { id = "pyproject", name = "validate pyproject", entry = "uv run --no-sync validate-pyproject pyproject.toml", language = "system", files = '^pyproject\.toml$', pass_filenames = false },
     { id = "licenses", name = "third-party licenses match Cargo.lock", entry = "bash -c 'make -s licenses && git diff --exit-code THIRD_PARTY_LICENSES.md'", language = "system", files = '^(Cargo\.(toml|lock)|crates/.*/Cargo\.toml|about\.(toml|hbs))$', pass_filenames = false },
     { id = "zizmor", name = "workflow hardening scan", entry = "uv run --no-sync zizmor --persona=regular .github/workflows", language = "system", files = '^\.github/workflows/.*\.ya?ml$', pass_filenames = false },
-    { id = "docs", name = "mkdocs strict build", entry = "uv run --no-sync mkdocs build --strict --quiet", language = "system", files = '^(docs/|mkdocs\.yml$|CHANGELOG\.md$)', pass_filenames = false },
+    { id = "docs", name = "zensical strict build", entry = "uv run --no-sync zensical build --strict --clean", language = "system", files = '^(docs/|mkdocs\.yml$|CHANGELOG\.md$)', pass_filenames = false },
     { id = "pytest", name = "python suite + coverage gate", entry = "make -s build test", language = "system", always_run = true, pass_filenames = false, stages = ["pre-push"] },
     { id = "llvm-cov", name = "rust coverage ≥ 90% driven by the python suite", entry = "make -s cov", language = "system", always_run = true, pass_filenames = false, stages = ["pre-push"] },
 ]

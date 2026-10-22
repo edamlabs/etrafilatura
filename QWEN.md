@@ -20,7 +20,7 @@ the workflow commits. Anything you change outside the allowlist below is discard
 | `tests/unit/etrafilatura/` | Mirror of `src/etrafilatura/`; public behaviour in `test_core.py` |
 | `tests/resources/html/` | Page fixtures; also the fidelity corpus |
 | `tests/resources/parity/` | Byte-parity goldens from Python trafilatura, checked by `test_extract_parity`; never edit them |
-| `docs/` | MkDocs site: `outputs.md`, `api.md`, `errors.md`, `compatibility.md`; `>>>` examples run as doctests |
+| `docs/` | Zensical site (reads `mkdocs.yml`): `outputs.md`, `api.md`, `errors.md`, `compatibility.md`; `>>>` examples run as doctests |
 | `CHANGELOG.md` | Keep a Changelog; you write under `## [Unreleased]` |
 
 The engine source of the pinned version is in `~/.cargo/registry/src/*/trafilatura-<version>/` after `uv sync`.
@@ -65,7 +65,7 @@ Never touch `.github/`, `Cargo.toml`, `Cargo.lock`, `pyproject.toml`, `uv.lock`,
 uv sync && SKIP=licenses,gitleaks uv run prek run --all-files && make build test
 ```
 
-passes: every prek hook (ruff, ty, tach, rustfmt, clippy, zizmor, mkdocs strict) and the unit suite at 100 %
+passes: every prek hook (ruff, ty, tach, rustfmt, clippy, zizmor, zensical strict) and the unit suite at 100 %
 Python coverage.
 
 ## Final summary format

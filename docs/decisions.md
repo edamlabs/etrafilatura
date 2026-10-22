@@ -187,3 +187,17 @@ engine already links the `url` crate, so validation costs no dependency. `test_s
 rotation happens in one place.
 
 **Rejected.** Repository-level secrets: one copy per repository to rotate.
+
+### 2026-10-22 · Documentation built with Zensical
+
+**Decision.** The site builds with [Zensical](https://zensical.org) (`zensical build --strict --clean`) in place
+of MkDocs + Material for MkDocs. `mkdocs.yml` stays the configuration: Zensical reads it natively and its migration
+guide recommends keeping it. Default `modern` variant. New EDamLabs projects start on Zensical.
+
+**Evidence.** Material for MkDocs is in maintenance mode, with critical and security fixes until 2026-11-05;
+MkDocs 2.0 removes the plugin system and the theme overrides, with no migration path. The existing `mkdocs.yml`
+built unchanged with Zensical 0.0.71 ("No issues found"); the pages were compared side by side, and the doctested
+examples are unaffected (they run in pytest, not in the site build).
+
+**Rejected.** Pinning `mkdocs<2` with Material 9.7 (frozen on a framework out of maintenance in two weeks);
+converting to `zensical.toml` now (no gain while `mkdocs.yml` is read; it can follow when Zensical stabilises).
