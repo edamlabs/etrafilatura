@@ -6,6 +6,8 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-10-22
+
 First release: PyO3 binding of trafilatura-rs 0.5.0 with trafilatura 2.3's syntax.
 
 ### Added
@@ -41,4 +43,5 @@ First release: PyO3 binding of trafilatura-rs 0.5.0 with trafilatura 2.3's synta
   grouped), changelog and license sync, upstream API diff, an agent that repairs or extends the binding on
   dependency updates within an allowlist, and a monthly dependency health check.
 
-[Unreleased]: https://github.com/edamlabs/etrafilatura/commits/main
+[Unreleased]: https://github.com/edamlabs/etrafilatura/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/edamlabs/etrafilatura/releases/tag/v0.1.0
