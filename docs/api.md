@@ -35,6 +35,7 @@ Main function: extraction and conversion to the chosen output format.
 | `settingsfile` | str \| None | `None` | `settings.cfg` override |
 | `prune_xpath` | str \| list[str] \| None | `None` | XPath expression(s) pruned before extraction |
 | `config` / `options` | ConfigParser / Extractor | defaults | Direct configuration |
+| `input_format` *(etrafilatura, keyword-only)* | `"html"` \| `"auto"` | `"html"` | How a `str` input is read — see [Input resolution](#input-resolution) |
 
 Returns `str | None` — `None` on every rejection (wrong language, too little content, duplicate, blacklist…).
 
@@ -48,6 +49,30 @@ Same parameters as `extract` (minus `record_id`, `tei_validation`, `settingsfile
 
 Same parameters as `extract` with `with_metadata` forced on. Returns a `Document` whose `.text` carries the
 rendered output, or `None`.
+
+## Input resolution
+
+An etrafilatura extension on `extract`, `bare_extraction`, `extract_with_metadata` and `extract_metadata`. Without
+it the behaviour is trafilatura's: a string is HTML.
+
+```python
+from pathlib import Path
+
+trafilatura.extract(Path("page.html"))                                # read from disk, any input_format
+trafilatura.extract("https://example.org/article", input_format="auto")  # fetched, then extracted
+trafilatura.extract("page.html", input_format="auto")                  # read from disk
+trafilatura.extract("https://example.org/article")                     # None: a URL string is not HTML
+```
+
+| Input | `input_format="html"` (default) | `input_format="auto"` |
+|---|---|---|
+| `os.PathLike` | read (trafilatura: `TypeError`) | read |
+| `str`, absolute `http(s)` URL, one token (WHATWG parser of the engine) | HTML | `fetch_response` with the call's config — SSRF guard, size and type checks; the final URL becomes `url` unless given |
+| `str`, existing file path (≤ 4096 chars, one line, no `<`) | HTML | read |
+| any other `str`, `bytes`, lxml tree, `Response` | as trafilatura | as trafilatura |
+
+Files are read up to `MAX_FILE_SIZE`; larger ones return `None`. A failed download returns `None`. Strings are
+resolved only on opt-in: guessing would fetch or read on behalf of a caller passing untrusted HTML.
 
 ## extract_metadata
 

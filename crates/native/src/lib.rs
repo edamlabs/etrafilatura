@@ -332,6 +332,15 @@ fn extract_metadata_html(
     Ok(MetadataResult::build(&metadata))
 }
 
+/// The URL, parsed and serialized by the WHATWG `url` crate, when it is absolute `http(s)` with a host; else None.
+#[pyfunction]
+fn absolute_url(url: &str) -> Option<String> {
+    url::Url::parse(url)
+        .ok()
+        .filter(|parsed| matches!(parsed.scheme(), "http" | "https") && parsed.has_host())
+        .map(String::from)
+}
+
 // ##### MODULE #####
 
 /// The version of the trafilatura-rs engine compiled into this extension.
@@ -342,6 +351,7 @@ const ENGINE_VERSION: &str = env!("TRAFILATURA_ENGINE_VERSION");
 fn _native(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(extract_html, m)?)?;
     m.add_function(wrap_pyfunction!(extract_metadata_html, m)?)?;
+    m.add_function(wrap_pyfunction!(absolute_url, m)?)?;
     m.add_class::<ExtractionResult>()?;
     m.add_class::<MetadataResult>()?;
     m.add("ENGINE_VERSION", ENGINE_VERSION)?;
@@ -358,6 +368,16 @@ mod tests {
     fn panic_reason_payloads() {
         assert_eq!(panic_reason(Box::new(String::from("owned"))), "owned");
         assert_eq!(panic_reason(Box::new("literal")), "literal");
+    }
+
+    #[test]
+    fn absolute_url_schemes() {
+        assert_eq!(
+            absolute_url("https://example.org").as_deref(),
+            Some("https://example.org/")
+        );
+        assert_eq!(absolute_url("ftp://example.org/x"), None);
+        assert_eq!(absolute_url("not a url"), None);
         assert_eq!(panic_reason(Box::new(7_u8)), "unknown panic");
     }
 }

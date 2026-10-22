@@ -37,7 +37,7 @@ depends_on = []
 
 [[modules]]
 path = "etrafilatura.utils"
-depends_on = []
+depends_on = ["etrafilatura._native"]
 
 [[modules]]
 path = "etrafilatura.settings"
@@ -65,7 +65,12 @@ depends_on = [
 
 [[modules]]
 path = "etrafilatura.metadata"
-depends_on = ["etrafilatura._native", "etrafilatura.settings", "etrafilatura.utils"]
+depends_on = [
+    "etrafilatura._native",
+    "etrafilatura.settings",
+    "etrafilatura.source",
+    "etrafilatura.utils",
+]
 
 [[modules]]
 path = "etrafilatura.downloads"
@@ -80,6 +85,7 @@ depends_on = [
     "etrafilatura.htmlprocessing",
     "etrafilatura.metadata",
     "etrafilatura.settings",
+    "etrafilatura.source",
     "etrafilatura.utils",
     "etrafilatura.xml",
 ]
@@ -102,3 +108,7 @@ depends_on = [
     "etrafilatura.settings",
     "etrafilatura.utils",
 ]
+
+[[modules]]
+path = "etrafilatura.source"
+depends_on = ["etrafilatura.downloads", "etrafilatura.settings", "etrafilatura.utils"]
