@@ -17,7 +17,7 @@ First release: PyO3 binding of trafilatura-rs 0.5.0 with trafilatura 2.3's synta
   HTML goes through trafilatura's vendored `convert_tags`, and trafilatura's rescue, size, tree-size and
   duplicate checks run in Python after the engine.
 - Output formats `txt`, `markdown`, `xml`, `xmltei`, `json`, `csv`, `html`, rendered by trafilatura's code vendored
-  verbatim (Apache-2.0, `NOTICE.md`): byte-identical on 68 of 88 golden cases of the synthetic corpus, the rest
+  verbatim (Apache-2.0, `NOTICE.md`): byte-identical on 64 of 84 golden cases of the synthetic corpus, the rest
   declared in the compatibility page.
 - `fetch_url`, `fetch_response`, `load_html` (lxml trees), `baseline` and `html2txt` (vendored), XPath
   `prune_xpath`, vendored `deduplication`.

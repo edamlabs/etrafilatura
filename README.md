@@ -38,7 +38,7 @@ PEP 8 and a Wikipedia article): 1.2–2.2× faster extraction on real pages, up 
 
 ![etrafilatura vs trafilatura](https://raw.githubusercontent.com/edamlabs/etrafilatura/main/docs/assets/benchmark.svg)
 
-**Agreement with trafilatura** — on the synthetic test pages, 68 of 88 format cases are byte-identical and the
+**Agreement with trafilatura** — on the synthetic test pages, 64 of 84 format cases are byte-identical and the
 other 20 are declared differences (tags, TEI version). On the eight-page corpus, real pages included, word-token
 agreement is 99.5 % (txt) and 99.6 % (markdown); the real pages differ by the engine's content selection
 ([method](https://edamlabs.github.io/etrafilatura/outputs/#fidelity), [map](https://edamlabs.github.io/etrafilatura/compatibility/)).

@@ -17,8 +17,8 @@ text = trafilatura.extract(downloaded, output_format="markdown", with_metadata=T
 
 Same verbs, keyword arguments, `Document` and lxml trees, renderers and `settings.cfg` as
 [trafilatura](https://trafilatura.readthedocs.io/), on a compiled engine and with three dependencies (lxml,
-urllib3, charset-normalizer) instead of seven. On the synthetic test pages the output is byte-identical in 68 of
-88 format cases; on real pages the engine selects slightly different content → [Compatibility](compatibility.md).
+urllib3, charset-normalizer) instead of seven. On the synthetic test pages the output is byte-identical in 64 of
+84 format cases; on real pages the engine selects slightly different content → [Compatibility](compatibility.md).
 
 | Call | Does |
 |---|---|

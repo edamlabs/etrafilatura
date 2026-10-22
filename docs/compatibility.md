@@ -9,7 +9,7 @@ engine, so content can differ page by page. This page says where, measured again
 | Check | Result | How |
 |---|---|---|
 | Signatures of the 9 top-level calls | Identical names, order, kinds and defaults; etrafilatura only appends keyword-only arguments | `inspect.signature` |
-| Byte-identical output, 6 synthetic pages × 7 formats × metadata on/off | 68 of 88 cases; the other 20 are the declared divergences below | `test_extract_parity` against goldens from `make parity` |
+| Byte-identical output, 6 synthetic pages × 7 formats × metadata on/off | 64 of 84 cases; the other 20 are the declared divergences below | `test_extract_parity` against goldens from `make parity` |
 | Token agreement on the full corpus (8 pages, two real) | txt 99.5 %, markdown 99.6 %; real pages 97.5–99.2 % | `make fidelity` → [Outputs](outputs.md#fidelity) |
 | `Document`, `Extractor` | Same slots in the same order: `as_dict()` and JSON keys come out alike | slot lists compared |
 | `settings.cfg` | Same keys, same values | `DEFAULT_CONFIG` compared |
