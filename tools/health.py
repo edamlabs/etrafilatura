@@ -128,11 +128,11 @@ class ManifestHealth:
         self._root = root
 
     def _run_crates(self) -> Iterator[tuple[str, RegistryHealth]]:
-        cargo = tomllib.loads((self._root / "Cargo.toml").read_text())
+        cargo = tomllib.loads((self._root / "Cargo.toml").read_text(encoding="utf-8"))
         return ((name, RegistryHealth.CRATES) for name in cargo.get("workspace", {}).get("dependencies", {}))
 
     def _run_python(self) -> Iterator[tuple[str, RegistryHealth]]:
-        project = tomllib.loads((self._root / "pyproject.toml").read_text())
+        project = tomllib.loads((self._root / "pyproject.toml").read_text(encoding="utf-8"))
         groups = [
             *project.get("dependency-groups", {}).values(),
             *project.get("project", {}).get("optional-dependencies", {}).values(),
@@ -251,7 +251,7 @@ def main() -> int:
     pulses = asyncio.run(ProbeHealth(arguments.token).run(dependencies))
     now = datetime.now(UTC)
     findings = [finding for pulse in pulses for finding in evaluate_health(pulse, now)]
-    arguments.output.write_text(FindingHealth.report(findings))
+    arguments.output.write_text(FindingHealth.report(findings), encoding="utf-8")
     sys.stdout.write(f"{len(dependencies)} dependencies checked, {len(findings)} findings\n")
     return FINDINGS_EXIT if findings else 0
 

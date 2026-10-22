@@ -35,5 +35,5 @@ METHODS: Final[dict[str, Any]] = {
 @pytest.mark.parametrize("document", DOCUMENTS)
 def test_bench(benchmark: Any, library: str, method: str, document: str) -> None:
     """One (library, method, document) timing; pytest-benchmark calibrates the rounds."""
-    html = (RESOURCES / f"{document}.html").read_text()
+    html = (RESOURCES / f"{document}.html").read_text(encoding="utf-8")
     benchmark(METHODS[method], LIBRARIES[library], html)

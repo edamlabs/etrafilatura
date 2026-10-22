@@ -144,7 +144,7 @@ def test_core_extract_prune(article: str) -> None:
 
 def test_core_extract_settingsfile(article: str, tmp_path) -> None:  # type: ignore[no-untyped-def]
     settings = tmp_path / "custom.cfg"
-    settings.write_text("[DEFAULT]\nMIN_OUTPUT_SIZE = 1\n")
+    settings.write_text("[DEFAULT]\nMIN_OUTPUT_SIZE = 1\n", encoding="utf-8")
     assert extract(article, settingsfile=str(settings)) is not None
 
 

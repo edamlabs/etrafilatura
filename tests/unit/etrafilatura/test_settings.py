@@ -38,7 +38,7 @@ def test_use_config_passthrough() -> None:
 
 def test_use_config_file(tmp_path) -> None:  # type: ignore[no-untyped-def]
     override = tmp_path / "custom.cfg"
-    override.write_text("[DEFAULT]\nMIN_EXTRACTED_SIZE = 50\n")
+    override.write_text("[DEFAULT]\nMIN_EXTRACTED_SIZE = 50\n", encoding="utf-8")
     config = use_config(str(override))
     assert config.getint("DEFAULT", "MIN_EXTRACTED_SIZE") == 50
     assert config.getint("DEFAULT", "MIN_OUTPUT_SIZE") == 1

@@ -157,12 +157,12 @@ def _trafilatura_version() -> str:
 
 def main() -> int:
     source = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / "bench.json"
-    payload = json.loads(source.read_text())
+    payload = json.loads(source.read_text(encoding="utf-8"))
     timings = collect(payload)
     docs = documents(timings)
     CHART.parent.mkdir(parents=True, exist_ok=True)
-    CHART.write_text(chart(timings, docs))
-    PAGE.write_text(page(payload, timings, docs))
+    CHART.write_text(chart(timings, docs), encoding="utf-8")
+    PAGE.write_text(page(payload, timings, docs), encoding="utf-8")
     total_ours = sum(
         value
         for (method, _, library), value in timings.items()

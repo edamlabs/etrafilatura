@@ -71,7 +71,9 @@ def test_repository_from_url(url, expected):
 
 
 def test_manifest_collects_crates_and_python_groups(tmp_path: Path):
-    (tmp_path / "Cargo.toml").write_text('[workspace.dependencies]\npyo3 = "0.29"\nhtml2markdown = "0.3"\n')
+    (tmp_path / "Cargo.toml").write_text(
+        '[workspace.dependencies]\npyo3 = "0.29"\nhtml2markdown = "0.3"\n', encoding="utf-8"
+    )
     (tmp_path / "pyproject.toml").write_text(
         '[project]\nname = "x"\ndependencies = ["msgspec>=0.19"]\n'
         '[project.optional-dependencies]\nocr = ["liteparse>=2.16"]\nfull = ["x[ocr]"]\n'
