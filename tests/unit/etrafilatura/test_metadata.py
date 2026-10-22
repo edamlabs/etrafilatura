@@ -39,7 +39,7 @@ def test_metadata_bytes_input(metadata_page: str) -> None:
 
 def test_metadata_path_rejected(tmp_path: Path, metadata_page: str) -> None:
     page = tmp_path / "meta.html"
-    page.write_text(metadata_page)
+    page.write_text(metadata_page, encoding="utf-8")
     ### trafilatura raises TypeError for non-HTML input types; paths are read by the caller.
     with pytest.raises(TypeError):
         extract_metadata(page)  # ty: ignore[invalid-argument-type]

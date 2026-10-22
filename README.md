@@ -29,12 +29,20 @@ trafilatura.bare_extraction(html_string)               # Document with .text, .b
 trafilatura.extract_metadata(html_string)              # title, author, date, sitename…
 ```
 
-**Extraction agreement** — the share of reference articles each output format recovers identically to what the
-engine extracts natively ([method](https://edamlabs.github.io/etrafilatura/outputs/#fidelity)).
+**Benchmark** — pytest-benchmark medians against Python trafilatura over six documents (synthetic pages,
+PEP 8 and a Wikipedia article): 1.2–2.2× faster extraction on real pages, up to 6.5× on metadata;
+`html2txt`/`baseline` run the same vendored lxml code on both sides
+([full matrix and method](https://edamlabs.github.io/etrafilatura/benchmark/)).
+
+![etrafilatura vs trafilatura](https://raw.githubusercontent.com/edamlabs/etrafilatura/main/docs/assets/benchmark.svg)
+
+**Extraction agreement** — token-level agreement with Python trafilatura's output on the same corpus:
+94 % (txt), 93.8 % (markdown), 97.5 % (metadata) ([method](https://edamlabs.github.io/etrafilatura/outputs/#fidelity)).
 
 | | |
 |---|---|
 | [Outputs](https://edamlabs.github.io/etrafilatura/outputs/) | Every output format, and what each carries |
+| [Benchmark](https://edamlabs.github.io/etrafilatura/benchmark/) | Timings against Python trafilatura, per method and document |
 | [API](https://edamlabs.github.io/etrafilatura/api/) | `extract`, `bare_extraction`, `fetch_url`, `extract_metadata`, … |
 | [Errors](https://edamlabs.github.io/etrafilatura/errors/) | What can fail, and how to catch it |
 | [Compatibility](https://edamlabs.github.io/etrafilatura/compatibility/) | Drop-in map from trafilatura, and the known gaps |

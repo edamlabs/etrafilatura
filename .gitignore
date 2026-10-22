@@ -228,6 +228,10 @@ __marimo__/
 # Rust coverage
 coverage.lcov
 
+# pytest-benchmark
+bench.json
+.benchmarks/
+
 # qwen-code-cli (maintenance workflow)
 .qwen/
 qwen-artifacts/

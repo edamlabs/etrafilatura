@@ -1,4 +1,4 @@
-.PHONY: build build-release test lint format types arch check cargo-fmt clean dist stress integration suite publish docs serve cov licenses health apidiff fidelity
+.PHONY: build build-release test lint format types arch check cargo-fmt clean dist stress integration suite publish docs serve cov licenses health apidiff fidelity benchmark
 
 build:            ## compile native extension into the venv (debug)
 	uv run maturin develop
@@ -38,6 +38,10 @@ cov:              ## Rust line coverage driven by the Python suite (gate: 90%)
 fidelity:         ## extraction agreement vs Python trafilatura (ARGS=--update rewrites baseline)
 	uv run --group bench python -m tools.fidelity $(ARGS)
 
+benchmark:        ## etrafilatura vs trafilatura timings -> docs/benchmark.md + chart
+	uv run --group bench pytest -m bench -q -p no:randomly -p no:cacheprovider --benchmark-json=bench.json
+	uv run --group bench python -m tools.benchchart bench.json
+
 licenses:         ## regenerate THIRD_PARTY_LICENSES.md from the Rust dependency tree
 	cargo about generate about.hbs | tr -d "\r" > THIRD_PARTY_LICENSES.md
 
@@ -51,7 +55,7 @@ cargo-fmt:        ## rustfmt the native crate
 	cargo fmt
 
 clean:            ## remove build artifacts
-	rm -rf target dist site .pytest_cache .ruff_cache htmlcov coverage.xml coverage.lcov .coverage health.md upstream-context
+	rm -rf target dist site .pytest_cache .ruff_cache htmlcov coverage.xml coverage.lcov .coverage health.md upstream-context bench.json .benchmarks
 
 dist:             ## build release wheels + sdist -> dist/
 	uv run maturin build --release --sdist --out dist

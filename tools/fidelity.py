@@ -63,7 +63,7 @@ def measure_page(html: str) -> dict[str, float | None]:
 
 def measure() -> dict[str, dict[str, float | None]]:
     """Agreement per corpus page."""
-    return {page.stem: measure_page(page.read_text()) for page in sorted(CORPUS_DIR.glob("*.html"))}
+    return {page.stem: measure_page(page.read_text(encoding="utf-8")) for page in sorted(CORPUS_DIR.glob("*.html"))}
 
 
 def means(scores: Mapping[str, Mapping[str, float | None]]) -> dict[str, float | None]:
@@ -135,15 +135,21 @@ def main() -> int:
 
     scores = measure()
     averaged = means(scores)
-    baseline = json.loads(BASELINE.read_text()) if BASELINE.exists() else {}
+    baseline = json.loads(BASELINE.read_text(encoding="utf-8")) if BASELINE.exists() else {}
     regressions = compare(averaged, baseline)
     report(scores)
     sys.stdout.write("\n".join(f"{name:<16} {value:.1%}\n" for name, value in averaged.items() if value is not None))
     if arguments.update:
-        BASELINE.write_text(json.dumps(averaged, indent=2) + "\n")
+        BASELINE.write_text(json.dumps(averaged, indent=2) + "\n", encoding="utf-8")
         CHART.parent.mkdir(parents=True, exist_ok=True)
-        CHART.write_text(chart(averaged, step=40, left=200, width=540, pages=len(scores), note="mean over the corpus"))
-        MINI.write_text(chart(averaged, step=34, left=170, width=420, pages=len(scores), note="mean over the corpus"))
+        CHART.write_text(
+            chart(averaged, step=40, left=200, width=540, pages=len(scores), note="mean over the corpus"),
+            encoding="utf-8",
+        )
+        MINI.write_text(
+            chart(averaged, step=34, left=170, width=420, pages=len(scores), note="mean over the corpus"),
+            encoding="utf-8",
+        )
         sys.stdout.write(
             f"updated {BASELINE.relative_to(ROOT)}, {CHART.relative_to(ROOT)} and {MINI.relative_to(ROOT)}\n"
         )

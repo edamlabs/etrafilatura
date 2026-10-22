@@ -34,13 +34,13 @@ def use_config(filename: str | None = None, config: ConfigParser | None = None) 
     parser = ConfigParser()
     default_file = str(Path(__file__).parent / "settings.cfg")
     if filename is None:
-        parser.read(default_file)
+        parser.read(default_file, encoding="utf-8")
     else:
         if not Path(filename).is_file():
             message = "The given config file does not exist"
             raise FileNotFoundError(message)
         ### Seed defaults first so a partial user file only overrides the keys it sets.
-        parser.read([default_file, filename])
+        parser.read([default_file, filename], encoding="utf-8")
     return parser
 
 

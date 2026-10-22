@@ -18,7 +18,7 @@ def test_cli_parser_defaults() -> None:
 
 def test_cli_file(article: str, tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     page = tmp_path / "page.html"
-    page.write_text(article)
+    page.write_text(article, encoding="utf-8")
     assert main([str(page)]) == 0
     assert "small tools" in capsys.readouterr().out.lower()
 
@@ -42,13 +42,13 @@ def test_cli_url_fetch_fails(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_cli_no_output(tmp_path: Path) -> None:
     empty = tmp_path / "empty.html"
-    empty.write_text("<html><body></body></html>")
+    empty.write_text("<html><body></body></html>", encoding="utf-8")
     assert main([str(empty)]) == 1
 
 
 def test_cli_every_flag(article: str, tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     page = tmp_path / "page.html"
-    page.write_text(article)
+    page.write_text(article, encoding="utf-8")
     code = main(
         [
             str(page),
@@ -76,15 +76,15 @@ def test_cli_every_flag(article: str, tmp_path: Path, capsys: pytest.CaptureFixt
 
 def test_cli_precision_flag(article: str, tmp_path: Path) -> None:
     page = tmp_path / "page.html"
-    page.write_text(article)
+    page.write_text(article, encoding="utf-8")
     assert main([str(page), "--precision", "--only-with-metadata"]) in (0, 1)
 
 
 def test_cli_config_file(article: str, tmp_path: Path) -> None:
     page = tmp_path / "page.html"
-    page.write_text(article)
+    page.write_text(article, encoding="utf-8")
     settings = tmp_path / "custom.cfg"
-    settings.write_text("[DEFAULT]\nMIN_OUTPUT_SIZE = 1\n")
+    settings.write_text("[DEFAULT]\nMIN_OUTPUT_SIZE = 1\n", encoding="utf-8")
     assert main([str(page), "--config", str(settings)]) == 0
 
 
