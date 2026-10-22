@@ -60,5 +60,6 @@ def extract_metadata_html(
     excluded_authors: list[str] = ...,
     date_mode: DateMode = "default",
 ) -> MetadataResult: ...
+def absolute_url(url: str) -> str | None: ...
 
 ENGINE_VERSION: str

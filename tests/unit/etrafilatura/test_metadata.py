@@ -2,8 +2,6 @@
 
 from pathlib import Path
 
-import pytest
-
 from etrafilatura.metadata import extract_metadata
 from etrafilatura.settings import Document
 
@@ -37,12 +35,11 @@ def test_metadata_bytes_input(metadata_page: str) -> None:
     assert document.title == "Una página rica en metadatos"
 
 
-def test_metadata_path_rejected(tmp_path: Path, metadata_page: str) -> None:
+def test_extract_metadata_path(tmp_path: Path, metadata_page: str) -> None:
     page = tmp_path / "meta.html"
     page.write_text(metadata_page, encoding="utf-8")
-    ### trafilatura raises TypeError for non-HTML input types; paths are read by the caller.
-    with pytest.raises(TypeError):
-        extract_metadata(page)  # ty: ignore[invalid-argument-type]
+    ### trafilatura raises TypeError on a Path: reading it widens the API without changing accepted inputs.
+    assert extract_metadata(page).title == extract_metadata(metadata_page).title
 
 
 def test_metadata_author_blacklist(metadata_page: str) -> None:

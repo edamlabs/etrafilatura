@@ -35,6 +35,14 @@ Extraction results agree on the large majority of pages and can differ on edge c
 are independent implementations. `make fidelity` measures the agreement continuously →
 [Outputs](outputs.md#fidelity).
 
+## Extensions
+
+Additive only: every trafilatura call keeps its signature, defaults and result.
+
+| Surface | Extension |
+|---|---|
+| `extract`, `bare_extraction`, `extract_with_metadata`, `extract_metadata` | `os.PathLike` inputs are read; keyword-only `input_format="auto"` fetches URL strings and reads path strings ([Input resolution](api.md#input-resolution)) |
+
 ## Not here
 
 | Surface | Note |

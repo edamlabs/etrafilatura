@@ -9,6 +9,7 @@ import json
 import logging
 import warnings
 from copy import copy
+from os import PathLike
 from typing import Any
 
 from lxml.etree import XPath, strip_tags
@@ -19,6 +20,7 @@ from etrafilatura.errors import ExtractionError
 from etrafilatura.htmlprocessing import build_html_output, prune_unwanted_nodes
 from etrafilatura.metadata import extract_metadata
 from etrafilatura.settings import DEFAULT_CONFIG, Document, Extractor, use_config
+from etrafilatura.source import AutoSource
 from etrafilatura.utils import HtmlInput, load_html, normalize_unicode
 from etrafilatura.xml import build_json_output, control_xml_output, delete_element, keeps_empty, xmltocsv, xmltotxt
 
@@ -118,7 +120,7 @@ def _check_deprecation(
 
 
 def bare_extraction(
-    filecontent: HtmlInput,
+    filecontent: HtmlInput | PathLike[str],
     url: str | None = None,
     fast: bool = False,
     no_fallback: bool = False,
@@ -142,6 +144,8 @@ def bare_extraction(
     prune_xpath: str | list[str] | None = None,
     config: Any = DEFAULT_CONFIG,
     options: Extractor | None = None,
+    *,
+    input_format: str = "html",
 ) -> Document | dict[str, Any] | None:
     """Internal function for text extraction returning bare Python variables.
 
@@ -175,6 +179,7 @@ def bare_extraction(
             can be str or list of str.
         config: Directly provide a configparser configuration.
         options: Directly provide a whole extractor configuration.
+        input_format: "html" (trafilatura's behaviour) or "auto": a URL string is fetched, a file path read.
 
     Returns:
         A Document (a dict with `as_dict=True`) containing all the extracted information, or None.
@@ -211,13 +216,17 @@ def bare_extraction(
             date_params=date_extraction_params,
         )
 
+    ### etrafilatura extension: a URL or file input resolved before trafilatura's pipeline.
+    content, fetched_url = AutoSource().run(filecontent, input_format, options.config)
+    options = AutoSource.bind(options, fetched_url)
+
     try:
         # load the HTML tree
-        tree = load_html(filecontent, options.max_file_size)
+        tree = load_html(content, options.max_file_size) if content is not None else None
         if tree is None:
             LOGGER.error("empty HTML tree: %s", options.source)
             raise ValueError
-        if tree is filecontent:
+        if tree is content:
             tree = copy(tree)
 
         # extract metadata if necessary
@@ -305,7 +314,7 @@ def bare_extraction(
 
 
 def _internal_extraction(
-    filecontent: HtmlInput,
+    filecontent: HtmlInput | PathLike[str],
     url: str | None = None,
     record_id: str | None = None,
     fast: bool = False,
@@ -331,6 +340,8 @@ def _internal_extraction(
     prune_xpath: str | list[str] | None = None,
     config: Any = DEFAULT_CONFIG,
     options: Extractor | None = None,
+    *,
+    input_format: str = "html",
 ) -> Document | None:
     """Internal method to do the extraction"""
     # stacklevel=4 → user → extract → _internal_extraction → _check_deprecation
@@ -372,6 +383,7 @@ def _internal_extraction(
         options=options,
         as_dict=False,
         prune_xpath=prune_xpath,
+        input_format=input_format,
     )
 
     # post-processing
@@ -393,7 +405,7 @@ def _internal_extraction(
 
 
 def extract(
-    filecontent: HtmlInput,
+    filecontent: HtmlInput | PathLike[str],
     url: str | None = None,
     record_id: str | None = None,
     fast: bool = False,
@@ -419,6 +431,8 @@ def extract(
     prune_xpath: str | list[str] | None = None,
     config: Any = DEFAULT_CONFIG,
     options: Extractor | None = None,
+    *,
+    input_format: str = "html",
 ) -> str | None:
     """Main function exposed by the package:
        Wrapper for text extraction and conversion to chosen output format.
@@ -454,6 +468,7 @@ def extract(
             can be str or list of str.
         config: Directly provide a configparser configuration.
         options: Directly provide a whole extractor configuration.
+        input_format: "html" (trafilatura's behaviour) or "auto": a URL string is fetched, a file path read.
 
     Returns:
         A string in the desired format or None.
@@ -464,7 +479,7 @@ def extract(
 
 
 def extract_with_metadata(
-    filecontent: HtmlInput,
+    filecontent: HtmlInput | PathLike[str],
     url: str | None = None,
     record_id: str | None = None,
     fast: bool = False,
@@ -486,6 +501,8 @@ def extract_with_metadata(
     prune_xpath: str | list[str] | None = None,
     config: Any = DEFAULT_CONFIG,
     options: Extractor | None = None,
+    *,
+    input_format: str = "html",
 ) -> Document | None:
     """Main function exposed by the package:
        Wrapper for text extraction and conversion to chosen output format.
