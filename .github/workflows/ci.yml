@@ -1,0 +1,163 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: prek (lint · types · arch · rust · licenses · workflows · secrets)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4  # v10.1.0
+      - uses: taiki-e/install-action@1168f6810a3cb30a3514bf5756a3b7f0422c6df8  # v2.87.28
+        with:
+          tool: cargo-about
+      - name: Same hooks as every local commit (docs build lives in its own job)
+        env:
+          SKIP: docs
+        run: |
+          uv sync --no-install-project
+          uv run --no-sync prek run --all-files --show-diff-on-failure
+
+  test:
+    name: test (${{ matrix.os }} · py${{ matrix.python }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python: ["3.12", "3.14"]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4  # v10.1.0
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6  # v2.9.2
+        with:
+          lookup-only: ${{ github.event_name == 'pull_request' }}
+      - name: Build + tests (logged for the maintenance agent)
+        env:
+          PYTHON: ${{ matrix.python }}
+        run: |
+          set -o pipefail
+          mkdir -p ci-logs
+          {
+            uv sync --python "$PYTHON" &&
+            uv run --no-sync pytest --cov --cov-report=term &&
+            uv run --no-sync pytest -m stress -q -p no:randomly --timeout=300
+          } 2>&1 | tee "ci-logs/build-test.log"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+        if: always()
+        with:
+          name: ci-logs-${{ matrix.os }}-py${{ matrix.python }}
+          path: ci-logs/
+
+  coverage:
+    name: rust coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4  # v10.1.0
+      - uses: taiki-e/install-action@1168f6810a3cb30a3514bf5756a3b7f0422c6df8  # v2.87.28
+        with:
+          tool: cargo-llvm-cov
+      - name: Line coverage of crates/native driven by the Python suite
+        run: |
+          rustup component add llvm-tools-preview
+          uv sync
+          tools/coverage.sh 90
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+        with:
+          name: coverage-lcov
+          path: coverage.lcov
+
+  upstream-context:
+    name: upstream context
+    if: github.event_name == 'pull_request' && startsWith(github.head_ref, 'renovate/')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Engine versions from Cargo.lock (base vs head)
+        id: v
+        env:
+          BASE: ${{ github.base_ref }}
+        run: |
+          version() { python3 -c 'import sys, tomllib; print(next((p["version"] for p in tomllib.loads(sys.stdin.read())["package"] if p["name"] == "trafilatura"), ""))'; }
+          echo "old=$(git show "origin/$BASE:Cargo.lock" | version)" >> "$GITHUB_OUTPUT"
+          echo "new=$(version < Cargo.lock)" >> "$GITHUB_OUTPUT"
+      - uses: taiki-e/install-action@1168f6810a3cb30a3514bf5756a3b7f0422c6df8  # v2.87.28
+        if: steps.v.outputs.old != steps.v.outputs.new
+        with:
+          tool: cargo-public-api
+      - name: Public API diff and release notes
+        if: steps.v.outputs.old != steps.v.outputs.new
+        env:
+          GH_TOKEN: ${{ github.token }}
+          OLD: ${{ steps.v.outputs.old }}
+          NEW: ${{ steps.v.outputs.new }}
+        run: |
+          rustup toolchain install nightly --profile minimal
+          tools/apidiff.sh trafilatura "$OLD" "$NEW" nchapman/trafilatura-rs upstream-context
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+        if: steps.v.outputs.old != steps.v.outputs.new
+        with:
+          name: upstream-context
+          path: upstream-context/
+
+  docs:
+    name: docs build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4  # v10.1.0
+      - name: Strict build (fails on broken links or missing assets)
+        run: |
+          uv sync --group docs --no-install-project
+          uv run mkdocs build --strict
+      - name: Stage site for Pages
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9  # v5.0.0
+        with:
+          path: site
+
+  pages:
+    name: pages deploy
+    needs: docs
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: github-pages
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346  # v5.0.1

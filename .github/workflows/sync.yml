@@ -1,0 +1,74 @@
+name: sync
+
+# On Renovate branches: the changelog records the new engine and the third-party licenses follow Cargo.lock.
+# The package version is the binding's own semver; a human sets it when releasing.
+# Deterministic; pushes with the App token so CI re-runs on the synced head.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sync-${{ github.head_ref }}
+  cancel-in-progress: true
+
+jobs:
+  version:
+    name: changelog and licenses
+    if: >
+      startsWith(github.head_ref, 'renovate/') &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510  # v3.3.0
+        id: app
+        with:
+          client-id: ${{ vars.APP_CLIENT_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          permission-contents: write
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          ref: ${{ github.head_ref }}
+          persist-credentials: false
+      - uses: taiki-e/install-action@1168f6810a3cb30a3514bf5756a3b7f0422c6df8  # v2.87.28
+        with:
+          tool: cargo-about
+      - name: Record the engine in the changelog, refresh the licenses
+        id: align
+        env:
+          BASE: ${{ github.base_ref }}
+        run: |
+          engine() { python3 -c 'import sys, tomllib; print(next(p["version"] for p in tomllib.loads(sys.stdin.read())["package"] if p["name"] == "trafilatura"))'; }
+          git fetch -q --depth=1 origin "$BASE"
+          ENGINE=$(engine < Cargo.lock)
+          PREVIOUS=$(git show FETCH_HEAD:Cargo.lock | engine)
+          LINE="- Engine: trafilatura-rs $ENGINE ([release notes](https://github.com/nchapman/trafilatura-rs/releases/tag/v$ENGINE))."
+          ### Only an engine bump earns a changelog line, and only once.
+          if [ "$ENGINE" != "$PREVIOUS" ] && ! grep -qF -- "- Engine: trafilatura-rs $ENGINE " CHANGELOG.md; then
+            awk -v line="$LINE" '
+              /^## \[Unreleased\]/ { inside = 1; print; next }
+              inside && /^### Changed/ { print; getline; print; print line; inside = 0; next }
+              inside && /^## \[/ { print "### Changed"; print ""; print line; print ""; inside = 0 }
+              { print }
+            ' CHANGELOG.md > CHANGELOG.tmp
+            mv CHANGELOG.tmp CHANGELOG.md
+          fi
+          cargo about generate about.hbs | tr -d "\r" > THIRD_PARTY_LICENSES.md
+          echo "engine=$ENGINE" >> "$GITHUB_OUTPUT"
+          if git diff --quiet; then echo "changed=false"; else echo "changed=true"; fi >> "$GITHUB_OUTPUT"
+
+      - name: Commit and push
+        if: steps.align.outputs.changed == 'true'
+        env:
+          TOKEN: ${{ steps.app.outputs.token }}
+          SLUG: ${{ steps.app.outputs.app-slug }}
+          BRANCH: ${{ github.head_ref }}
+          ENGINE: ${{ steps.align.outputs.engine }}
+        run: |
+          git config user.name "$SLUG[bot]"
+          git config user.email "$SLUG[bot]@users.noreply.github.com"
+          git commit -am "chore(sync): changelog and licenses for trafilatura-rs $ENGINE"
+          git push "https://x-access-token:$TOKEN@github.com/${GITHUB_REPOSITORY}.git" "HEAD:$BRANCH"

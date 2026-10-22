@@ -1,0 +1,153 @@
+[build-system]
+requires = ["maturin>=1.10"]
+build-backend = "maturin"
+
+[project]
+name = "etrafilatura"
+version = "0.1.0"
+description = "Python binding of trafilatura-rs: web page main text, comments and metadata extraction at Rust speed, trafilatura-compatible syntax."
+readme = "README.md"
+requires-python = ">=3.12"
+license = "MIT"
+license-files = ["LICENSE", "THIRD_PARTY_LICENSES.md"]
+authors = [{ name = "EDamLabs" }]
+keywords = ["trafilatura", "extraction", "html", "scraping", "content", "boilerplate", "metadata", "rust", "trafilatura-rs"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Programming Language :: Rust",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Text Processing :: Markup :: HTML",
+    "Typing :: Typed",
+]
+dependencies = [
+    "urllib3>=2.5",
+    "charset-normalizer>=3.4",
+]
+
+[project.urls]
+Homepage = "https://github.com/edamlabs/etrafilatura"
+Documentation = "https://edamlabs.github.io/etrafilatura/"
+Source = "https://github.com/edamlabs/etrafilatura"
+Issues = "https://github.com/edamlabs/etrafilatura/issues"
+Upstream = "https://github.com/nchapman/trafilatura-rs"
+
+[project.scripts]
+etrafilatura = "etrafilatura.cli:main"
+
+[dependency-groups]
+lint = [
+    "ruff>=0.16",
+    "ty>=0.0.75",
+    "tach>=0.30",
+    "validate-pyproject[all]>=0.26",
+    "zizmor>=1.25",
+]
+test = [
+    "pytest>=9.1",
+    "pytest-cov>=7.1",
+    "pytest-randomly>=5.0",
+    "pytest-timeout>=2.4",
+    "hypothesis>=6.150",
+]
+bench = [
+    "trafilatura>=2.3",
+]
+build = [
+    "maturin>=1.10",
+]
+docs = [
+    "mkdocs-material>=9.7",
+]
+dev = [
+    { include-group = "lint" },
+    { include-group = "test" },
+    { include-group = "bench" },
+    { include-group = "build" },
+    { include-group = "docs" },
+    "prek>=0.4",
+]
+
+[tool.uv]
+required-version = ">=0.12"
+default-groups = ["dev"]
+cache-keys = [{ file = "pyproject.toml" }, { file = "Cargo.toml" }, { file = "Cargo.lock" }]
+
+[tool.maturin]
+manifest-path = "crates/native/Cargo.toml"
+module-name = "etrafilatura._native"
+python-source = "src"
+features = ["pyo3/extension-module"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+src = ["src", "tests"]
+exclude = ["tests/resources"]
+
+[tool.ruff.lint]
+select = [
+    "F", "E", "W", "I", "N", "UP", "B", "A", "C4", "DTZ", "T10", "T20", "EM", "ISC",
+    "PIE", "PT", "RET", "SIM", "TID", "TC", "ARG", "PTH", "PL", "PERF", "FURB",
+    "ASYNC", "S", "BLE", "FBT", "LOG", "G", "RUF",
+]
+ignore = ["E501", "ISC001", "PLR0913"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "PLR2004", "ARG", "FBT", "S318", "EM101", "EM102"]
+"tools/*.py" = ["S310", "PLR2004"]
+# The public surface mirrors trafilatura's positional-bool signatures verbatim: drop-in beats house style there.
+"src/etrafilatura/core.py" = ["FBT001", "FBT002", "FBT003", "PLR0917"]
+"src/etrafilatura/baseline.py" = ["FBT001", "FBT002"]
+"src/etrafilatura/downloads.py" = ["FBT001", "FBT002"]
+"src/etrafilatura/metadata.py" = ["FBT001", "FBT002"]
+"src/etrafilatura/settings.py" = ["FBT001", "FBT002"]
+"src/etrafilatura/utils.py" = ["FBT001", "FBT002"]
+"src/etrafilatura/xml.py" = ["FBT001", "FBT002", "S318"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["etrafilatura", "tests"]
+
+[tool.ruff.lint.flake8-builtins]
+ignorelist = ["format", "license"]
+
+[tool.ruff.lint.flake8-tidy-imports]
+ban-relative-imports = "all"
+
+[tool.ty.environment]
+python-version = "3.12"
+
+[tool.ty.src]
+include = ["src", "tests", "tools"]
+exclude = ["tests/resources"]
+
+[tool.ty.terminal]
+error-on-warning = true
+
+[tool.pytest]
+minversion = "9.0"
+testpaths = ["tests"]
+addopts = ["--import-mode=importlib", "-ra", "-m", "not stress and not integration"]
+pythonpath = ["."]
+strict = true
+filterwarnings = ["error"]
+timeout = "60"
+markers = [
+    "slow: slow tests (deselect with -m 'not slow')",
+    "stress: concurrency and volume stress (run via make stress)",
+    "integration: live network calls (run via make integration)",
+]
+
+[tool.coverage.run]
+source_pkgs = ["etrafilatura"]
+branch = true
+parallel = true
+
+[tool.coverage.report]
+fail_under = 100
+show_missing = true
+skip_covered = false
+exclude_also = ["if TYPE_CHECKING:", "@overload", "raise NotImplementedError"]

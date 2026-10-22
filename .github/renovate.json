@@ -1,0 +1,85 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    ":dependencyDashboard"
+  ],
+  "enabledManagers": [
+    "cargo",
+    "pep621",
+    "github-actions"
+  ],
+  "schedule": [
+    "before 6am on monday"
+  ],
+  "timezone": "Europe/Madrid",
+  "prConcurrentLimit": 3,
+  "abandonmentThreshold": "1 year",
+  "rangeStrategy": "bump",
+  "lockFileMaintenance": {
+    "enabled": false
+  },
+  "packageRules": [
+    {
+      "description": "requires-python is a support promise, not a dependency: never bumped by a bot.",
+      "matchDepTypes": [
+        "requires-python"
+      ],
+      "enabled": false
+    },
+    {
+      "description": "The engine: react at once, one PR per release, changelog and licenses by sync.yml, gaps filled by maintenance.yml.",
+      "matchManagers": [
+        "cargo"
+      ],
+      "matchPackageNames": [
+        "trafilatura"
+      ],
+      "schedule": [
+        "at any time"
+      ],
+      "labels": [
+        "upstream-update"
+      ],
+      "commitMessagePrefix": "upstream:",
+      "automerge": false
+    },
+    {
+      "description": "PyO3 shapes the binding itself: separate PRs, maintenance repairs breakage.",
+      "matchManagers": [
+        "cargo"
+      ],
+      "matchPackageNames": [
+        "pyo3"
+      ],
+      "labels": [
+        "binding-update"
+      ],
+      "automerge": false
+    },
+    {
+      "description": "Python tooling: one weekly PR.",
+      "matchManagers": [
+        "pep621"
+      ],
+      "groupName": "python tooling",
+      "labels": [
+        "tooling"
+      ]
+    },
+    {
+      "description": "Workflow actions stay pinned by digest; one monthly PR.",
+      "matchManagers": [
+        "github-actions"
+      ],
+      "groupName": "github actions",
+      "pinDigests": true,
+      "schedule": [
+        "before 6am on the first day of the month"
+      ],
+      "labels": [
+        "tooling"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,114 @@
+# API
+
+```python
+import etrafilatura as trafilatura
+```
+
+Every public call mirrors trafilatura's signature. This page documents each one with its parameters and
+returns; the [compatibility map](compatibility.md) lists the known gaps.
+
+## extract
+
+```python
+trafilatura.extract(html, output_format="markdown", include_comments=False)
+```
+
+Main function: extraction and conversion to the chosen output format.
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `filecontent` | str \| bytes \| Path \| Response | — | The page |
+| `url` | str \| None | `None` | Original URL, resolves relative links |
+| `record_id` | str \| None | `None` | ID added to the metadata |
+| `fast` | bool | `False` | Skip backup (fallback) extraction |
+| `favor_precision` / `favor_recall` | bool | `False` | Extraction focus |
+| `include_comments` | bool | `True` | Extract comments separately |
+| `output_format` | str | `"txt"` | `csv`, `html`, `json`, `markdown`, `txt`, `xml`, `xmltei`, `yaml` |
+| `tei_validation` | bool | `False` | Validate TEI well-formedness |
+| `target_language` | str \| None | `None` | Discard other languages (ISO 639-1) |
+| `include_tables` / `include_images` / `include_links` | bool | `True` / `False` / `False` | Keep these elements |
+| `include_formatting` | bool \| None | `None` | Keep formatting; implied by `markdown` |
+| `deduplicate` | bool \| LRUCache | `False` | Segment and document deduplication |
+| `date_extraction_params` | dict \| None | `None` | Date search parameters (`extensive_search`) |
+| `with_metadata` / `only_with_metadata` | bool | `False` | Metadata in output / require date+title+url |
+| `url_blacklist` / `author_blacklist` | set[str] \| None | `None` | Discard filtered documents/authors |
+| `settingsfile` | str \| None | `None` | `settings.cfg` override |
+| `prune_xpath` | str \| list[str] \| None | `None` | **CSS selectors** pruned before extraction |
+| `config` / `options` | ConfigParser / Extractor | defaults | Direct configuration |
+
+Returns `str | None` — `None` on every rejection (wrong language, too little content, duplicate, blacklist…).
+
+## bare_extraction
+
+Same parameters as `extract` (minus `record_id`, `tei_validation`, `settingsfile`; plus `as_dict`), with
+`output_format="python"` by default. Returns a [`Document`](#document) — `.text`, `.body`, `.comments`,
+`.commentsbody`, `.raw_text` and the metadata fields — a `dict` with `as_dict=True`, or `None`.
+
+## extract_with_metadata
+
+Same parameters as `extract` with `with_metadata` forced on. Returns a `Document` whose `.text` carries the
+rendered output, or `None`.
+
+## extract_metadata
+
+```python
+document = trafilatura.extract_metadata(html, default_url="https://example.org/page")
+document.title, document.author, document.date, document.sitename
+```
+
+| Parameter | Type | Default |
+|---|---|---|
+| `filecontent` | str \| bytes \| Path \| Response | — |
+| `default_url` | str \| None | `None` |
+| `date_config` | dict \| None | `None` |
+| `extensive` | bool | `True` |
+| `author_blacklist` | set[str] \| None | `None` |
+
+Always returns a `Document` (empty when there is nothing to parse).
+
+## fetch_url · fetch_response · is_live_page
+
+```python
+page = trafilatura.fetch_url("https://example.org")
+response = trafilatura.fetch_response("https://example.org", decode=True)
+```
+
+`fetch_url(url, no_ssl=False, config=DEFAULT_CONFIG, options=None) -> str | None` — downloads and decodes;
+returns `None` on failures and unsuitable responses (status, content type, size limits).
+`fetch_response(url, *, decode=False, no_ssl=False, config=DEFAULT_CONFIG) -> Response | None` — the full
+response object (`.status`, `.headers`, `.data`, `.html`). `is_live_page(url)` answers a HEAD probe.
+
+Pooling, retries, timeouts, user agents, cookies, SSRF protection and the insecure-SSL fallback are configured
+through the same `settings.cfg` keys as trafilatura.
+
+## load_html · baseline · html2txt
+
+```python
+html = trafilatura.load_html(b"...")        # bytes/Path/Response → normalized HTML string
+document, text, length = trafilatura.baseline(html)
+trafilatura.html2txt(html)                  # tag stripping
+```
+
+## Document
+
+`etrafilatura.settings.Document`: same slots and methods as trafilatura's (`as_dict()`, `from_dict()`,
+`clean_and_trim()`). Difference: `.body` and `.commentsbody` hold cleaned HTML **strings**, not lxml trees.
+
+## Extractor · use_config
+
+```python
+from etrafilatura.settings import Extractor, use_config
+
+config = use_config("my-settings.cfg")     # FileNotFoundError when missing
+options = Extractor(config=config, output_format="xml", recall=True, lang="en")
+trafilatura.extract(html, options=options)
+```
+
+`Extractor` validates `output_format` (`AttributeError` otherwise), derives `focus`, `formatting` and
+`with_metadata` exactly like trafilatura's, and reads the size and deduplication thresholds from the config.
+
+## Native layer
+
+`etrafilatura.ENGINE_VERSION` is the trafilatura-rs release compiled in; `etrafilatura.__version__` is this
+package's own semver. The compiled module `etrafilatura._native` (`extract_html`, `extract_metadata_html`,
+`html_to_text`, `html_to_markdown`) is private; it is typed in `_native.pyi` and covered by the same suite.

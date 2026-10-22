@@ -1,0 +1,73 @@
+site_name: etrafilatura
+site_description: Python binding of trafilatura-rs — web page extraction at Rust speed, trafilatura-compatible syntax.
+site_url: https://edamlabs.github.io/etrafilatura/
+repo_name: edamlabs/etrafilatura
+repo_url: https://github.com/edamlabs/etrafilatura
+edit_uri: edit/main/docs/
+copyright: MIT · binding &copy; 2026 EDamLabs · engine &copy; nchapman (Apache-2.0)
+
+theme:
+  name: material
+  icon:
+    logo: material/web-sync
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: custom
+      accent: custom
+      toggle: { icon: material/weather-sunny, name: Dark mode }
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: custom
+      accent: custom
+      toggle: { icon: material/weather-night, name: Light mode }
+  features:
+    - navigation.tabs
+    - navigation.top
+    - navigation.instant
+    - navigation.sections
+    - content.code.copy
+    - content.code.annotate
+    - search.share
+
+extra:
+  generator: false
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/edamlabs/etrafilatura
+    - icon: fontawesome/brands/rust
+      link: https://github.com/nchapman/trafilatura-rs
+
+extra_css:
+  - stylesheets/extra.css
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - toc: { permalink: true }
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed: { alternate_style: true }
+  - pymdownx.highlight: { anchor_linenums: true, line_spans: __span }
+  - pymdownx.snippets: { check_paths: true }
+
+plugins:
+  - search
+
+nav:
+  - Home: index.md
+  - Outputs: outputs.md
+  - API: api.md
+  - Errors: errors.md
+  - Compatibility: compatibility.md
+  - Project:
+      - Upstream and versioning: upstream.md
+      - Self-maintenance: maintenance.md
+      - Development: development.md
+      - Changelog: changelog.md

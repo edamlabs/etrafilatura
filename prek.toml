@@ -1,0 +1,50 @@
+# Configuration file for `prek`, a git hook framework written in Rust.
+# See https://prek.j178.dev for more information.
+#:schema https://www.schemastore.org/prek.json
+
+default_install_hook_types = ["pre-commit", "pre-push"]
+exclude = '^(tests/resources/|THIRD_PARTY_LICENSES\.md$)'
+
+##### HYGIENE #####
+
+[[repos]]
+repo = "builtin"
+hooks = [
+    { id = "trailing-whitespace" },
+    { id = "end-of-file-fixer" },
+    { id = "mixed-line-ending" },
+    { id = "check-merge-conflict" },
+    { id = "check-toml" },
+    { id = "check-yaml" },
+    { id = "check-json" },
+    { id = "check-added-large-files" },
+    { id = "detect-private-key" },
+]
+
+##### PYTHON · RUST #####
+
+[[repos]]
+repo = "local"
+hooks = [
+    { id = "ruff", name = "ruff check", entry = "uv run --no-sync ruff check --fix --exit-non-zero-on-fix", language = "system", types_or = ["python", "pyi"] },
+    { id = "ruff-format", name = "ruff format", entry = "uv run --no-sync ruff format", language = "system", types_or = ["python", "pyi"] },
+    { id = "rustfmt", name = "cargo fmt", entry = "cargo fmt --all --check", language = "system", types = ["rust"], pass_filenames = false },
+    { id = "ty", name = "ty type check", entry = "uv run --no-sync ty check", language = "system", types_or = ["python", "pyi"], pass_filenames = false },
+    { id = "clippy", name = "cargo clippy (warnings are errors)", entry = "cargo clippy --locked --all-targets -- -D warnings", language = "system", types_or = ["rust", "toml"], pass_filenames = false },
+    { id = "tach", name = "tach architecture check", entry = "uv run --no-sync tach check", language = "system", types_or = ["python", "pyi"], pass_filenames = false },
+    { id = "pyproject", name = "validate pyproject", entry = "uv run --no-sync validate-pyproject pyproject.toml", language = "system", files = '^pyproject\.toml$', pass_filenames = false },
+    { id = "licenses", name = "third-party licenses match Cargo.lock", entry = "bash -c 'make -s licenses && git diff --exit-code THIRD_PARTY_LICENSES.md'", language = "system", files = '^(Cargo\.(toml|lock)|crates/.*/Cargo\.toml|about\.(toml|hbs))$', pass_filenames = false },
+    { id = "zizmor", name = "workflow hardening scan", entry = "uv run --no-sync zizmor --persona=regular .github/workflows", language = "system", files = '^\.github/workflows/.*\.ya?ml$', pass_filenames = false },
+    { id = "docs", name = "mkdocs strict build", entry = "uv run --no-sync mkdocs build --strict --quiet", language = "system", files = '^(docs/|mkdocs\.yml$|CHANGELOG\.md$)', pass_filenames = false },
+    { id = "pytest", name = "python suite + coverage gate", entry = "make -s build test", language = "system", always_run = true, pass_filenames = false, stages = ["pre-push"] },
+    { id = "llvm-cov", name = "rust coverage ≥ 90% driven by the python suite", entry = "make -s cov", language = "system", always_run = true, pass_filenames = false, stages = ["pre-push"] },
+]
+
+##### SECRETS #####
+
+[[repos]]
+repo = "https://github.com/gitleaks/gitleaks"
+rev = "v8.30.1"
+hooks = [
+    { id = "gitleaks" },
+]

@@ -1,0 +1,18 @@
+[package]
+name = "etrafilatura-native"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+description = "Native binding of trafilatura-rs for Python: web page extraction at Rust speed."
+
+[lib]
+name = "_native"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = { workspace = true }
+trafilatura = { workspace = true }
+html2markdown = "0.3"
+url = "2"

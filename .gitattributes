@@ -1,0 +1,2 @@
+# Fixtures are byte-exact inputs: no line-ending conversion on any platform.
+tests/resources/** -text

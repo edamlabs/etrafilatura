@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Una página rica en metadatos</title>
+<meta name="author" content="Marta Gil">
+<meta name="description" content="Página de prueba con metadatos completos.">
+<meta name="keywords" content="prueba, metadatos, extracción">
+<meta property="og:title" content="Una página rica en metadatos">
+<meta property="og:url" content="https://example.org/es/metadatos">
+<meta property="og:site_name" content="El Laboratorio">
+<meta property="og:image" content="https://example.org/img/portada.png">
+<meta property="og:type" content="article">
+<meta property="article:published_time" content="2026-05-20T08:30:00Z">
+<script type="application/ld+json">
+{"@context": "https://schema.org", "@type": "Article",
+ "headline": "Una página rica en metadatos",
+ "author": {"@type": "Person", "name": "Marta Gil"},
+ "datePublished": "2026-05-20",
+ "license": "https://creativecommons.org/licenses/by/4.0/",
+ "inLanguage": "es"}
+</script>
+</head>
+<body>
+<article>
+<h1>Una página rica en metadatos</h1>
+<p>Esta página existe para probar la extracción de metadatos: título, autora, fecha de publicación, nombre
+del sitio, descripción, categorías, etiquetas, licencia e idioma. El motor debe recuperarlos todos desde las
+etiquetas meta, OpenGraph y JSON-LD sin necesidad del cuerpo del texto.</p>
+<p>El segundo párrafo añade volumen suficiente para que el extractor principal considere el artículo como
+contenido válido y no intente ninguna estrategia de reserva.</p>
+</article>
+</body>
+</html>

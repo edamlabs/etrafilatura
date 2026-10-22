@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Release Notes: Version Three</title>
+<meta name="author" content="Bob Nakamura">
+<meta property="article:published_time" content="2026-03-14T09:00:00Z">
+<meta property="og:site_name" content="Devlog">
+<meta property="og:url" content="https://example.org/blog/v3">
+<meta name="keywords" content="release, changelog">
+<script type="application/ld+json">
+{"@context": "https://schema.org", "@type": "NewsArticle",
+ "headline": "Release Notes: Version Three",
+ "author": {"@type": "Person", "name": "Bob Nakamura"},
+ "datePublished": "2026-03-14",
+ "publisher": {"@name": "Devlog"},
+ "articleSection": "Engineering",
+ "keywords": ["release", "notes"]}
+</script>
+</head>
+<body>
+<header><a href="/">Devlog</a></header>
+<article>
+<h1>Release Notes: Version Three</h1>
+<p>Version three is out. The headline change is speed: the extraction pipeline moved to a compiled core and
+now processes a typical page in a fraction of the time the previous version needed.</p>
+<p>The configuration file format did not change. Every key you already use is read the same way, and the
+defaults are the ones you know. We resisted the temptation to rename things.</p>
+<p>Under the hood, the parser was replaced, the boilerplate heuristics were ported one by one with their
+test fixtures, and the fallback strategies now run concurrently where the page structure allows it.</p>
+</article>
+<div class="comments" id="comments">
+<h2>3 comments</h2>
+<div class="comment" id="comment-1">
+<p class="comment-author">Carol</p>
+<p class="comment-body">Finally, the config migration I did not have to do. Upgraded in ten minutes.</p>
+</div>
+<div class="comment" id="comment-2">
+<p class="comment-author">Dave</p>
+<p class="comment-body">Benchmarked against the old version on our crawl archive: same output on almost
+every page, roughly six times faster end to end.</p>
+</div>
+<div class="comment" id="comment-3">
+<p class="comment-author">Erin</p>
+<p class="comment-body">Any chance of a streaming mode for very large documents? Otherwise this is exactly
+what we needed.</p>
+</div>
+</div>
+<footer>Powered by Devlog</footer>
+</body>
+</html>

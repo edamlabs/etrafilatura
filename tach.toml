@@ -1,0 +1,89 @@
+#  tach · architectural import contracts (Rust-backed) · CI: `tach check` (make arch)
+#  Layers mirror trafilatura's own module graph: settings/utils/deduplication (contracts)
+#  ← downloads/baseline/metadata/xml (engines) ← core/cli (use cases) ← etrafilatura (public surface).
+
+source_roots = ["src"]
+
+exclude = ["tests", "docs"]
+
+forbid_circular_dependencies = true
+
+exact = true
+
+root_module = "forbid"
+
+[rules]
+unused_ignore_directives = "error"
+
+[[modules]]
+path = "etrafilatura"
+depends_on = [
+    "etrafilatura._native",
+    "etrafilatura.baseline",
+    "etrafilatura.core",
+    "etrafilatura.downloads",
+    "etrafilatura.metadata",
+    "etrafilatura.utils",
+]
+
+[[modules]]
+path = "etrafilatura._native"
+depends_on = []
+
+[[modules]]
+path = "etrafilatura.errors"
+depends_on = []
+
+[[modules]]
+path = "etrafilatura.utils"
+depends_on = []
+
+[[modules]]
+path = "etrafilatura.deduplication"
+depends_on = []
+
+[[modules]]
+path = "etrafilatura.settings"
+depends_on = ["etrafilatura.deduplication", "etrafilatura.utils"]
+
+[[modules]]
+path = "etrafilatura.metadata"
+depends_on = ["etrafilatura._native", "etrafilatura.settings", "etrafilatura.utils"]
+
+[[modules]]
+path = "etrafilatura.baseline"
+depends_on = [
+    "etrafilatura._native",
+    "etrafilatura.errors",
+    "etrafilatura.settings",
+    "etrafilatura.utils",
+]
+
+[[modules]]
+path = "etrafilatura.downloads"
+depends_on = ["etrafilatura.settings", "etrafilatura.utils"]
+
+[[modules]]
+path = "etrafilatura.xml"
+depends_on = ["etrafilatura._native", "etrafilatura.settings"]
+
+[[modules]]
+path = "etrafilatura.core"
+depends_on = [
+    "etrafilatura._native",
+    "etrafilatura.deduplication",
+    "etrafilatura.errors",
+    "etrafilatura.metadata",
+    "etrafilatura.settings",
+    "etrafilatura.utils",
+    "etrafilatura.xml",
+]
+
+[[modules]]
+path = "etrafilatura.cli"
+depends_on = [
+    "etrafilatura",
+    "etrafilatura.core",
+    "etrafilatura.downloads",
+    "etrafilatura.settings",
+]
