@@ -24,8 +24,8 @@ The engine source of the pinned version is in `~/.cargo/registry/src/*/trafilatu
 
 ## Allowlist
 
-You may modify only: `crates/native/src/`, `src/etrafilatura/`, `tests/`, `docs/` (except `docs/fidelity.json`, the
-regression baseline), `CHANGELOG.md`, `README.md`. A rename counts as a deletion plus an addition: both paths
+You may modify only: `crates/native/src/`, `src/etrafilatura/`, `tests/` (except `tests/resources/parity/`, the
+byte-parity goldens), `docs/` (except `docs/fidelity.json`, the regression baseline), `CHANGELOG.md`, `README.md`. A rename counts as a deletion plus an addition: both paths
 must be allowed.
 Never touch `.github/`, `Cargo.toml`, `Cargo.lock`, `pyproject.toml`, `uv.lock`, `QWEN.md` or any version number.
 

@@ -4,6 +4,26 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- Trees in trafilatura's vocabulary: the engine's HTML (`h1`, `blockquote`, `ul/li`, `a`, `b`, `td`) is converted
+  by trafilatura's vendored `convert_tags` (`head rend`, `quote`, `list/item`, `ref`, `hi`, `row/cell`) before
+  rendering. Headings, line breaks and TEI validity now match trafilatura.
+- Rescue, size, tree-size and duplicate checks run in Python as trafilatura runs them: an empty `<body>` returns
+  `None` (it returned the `<title>`), and a short page no longer repeats its text.
+- YAML metadata header keeps non-ASCII characters (`ensure_ascii=False`, as upstream).
+- `Document` and `Extractor` slots in upstream order: `as_dict()` and JSON keys come out in trafilatura's order.
+- Metadata: `filedate` set from the date parameters, `pagetype` lower-case, `categories`/`tags` empty lists,
+  `hostname` from courlan's fast domain rule; an invalid `url`/`default_url` no longer raises.
+- `settings.cfg`: `EXTRACTION_TIMEOUT` and `EXTERNAL_URLS` keys restored.
+- Decompression is output-capped while streaming (it decompressed fully, then measured): gzip and zstd
+  multi-member, brotli and deflate as trafilatura, bz2, xz and zip on top.
+
+### Added
+
+- Byte-parity goldens (`make parity`) and a unit test against them; known divergences are strict `xfail`s.
+- `make fidelity` scores byte-exact agreement per format next to token agreement.
+
 ## [0.1.0] - 2026-10-22
 
 Initial release: PyO3 binding of trafilatura-rs 0.5.0, 100 % API-compatible with trafilatura 2.3.x.

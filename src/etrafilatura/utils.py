@@ -4,25 +4,59 @@ Portions vendored from trafilatura 2.3.1 (https://github.com/adbar/trafilatura),
 Copyright 2019-present Adrien Barbaresi and contributors: `load_html`, `repair_faulty_html`,
 `fromstring_bytes`, `sanitize_tree`, `text_chars_test`, `textfilter`, `as_list`, `image_src`,
 `is_image_file`, `trim`, `sanitize`, `line_processing`, `remove_control_characters`,
-`normalize_unicode`. Copied verbatim except absolute imports; see NOTICE.md.
+`normalize_unicode`, `is_dubious_html`, `return_printables_and_spaces`, `safe_base_url`,
+`safe_relative_url`. `get_base_url` and `fix_relative_urls` from courlan 1.4.0 (its `_parse` inlined)
+(https://github.com/adbar/courlan), Apache-2.0, same authors. Copied verbatim except absolute imports;
+see NOTICE.md.
 """
 
 import bz2
-import gzip
 import logging
 import lzma
 import re
+import sys
 import zipfile
-from collections.abc import Iterable, Mapping
+import zlib
+from collections.abc import Callable, Mapping
 from functools import lru_cache
 from io import BytesIO
+from types import MappingProxyType
 from typing import Any, Final, Literal
 from unicodedata import normalize
+from urllib.parse import SplitResult, urljoin, urlsplit, urlunsplit
 
 from charset_normalizer import from_bytes
 from lxml.etree import _Element
 from lxml.html import HtmlElement, HTMLParser, fromstring
 from urllib3.response import HTTPResponse
+
+# response compression
+try:
+    import brotli
+
+    # output_buffer_limit (brotli >= 1.2) is the only way to bound the output:
+    # process() otherwise returns the whole expansion, which voids the bomb cap
+    try:
+        brotli.Decompressor().process(b"", output_buffer_limit=1)
+        HAS_BROTLI = True
+    except Exception:  # pragma: no cover
+        HAS_BROTLI = False
+except ImportError:  # pragma: no cover
+    HAS_BROTLI = False
+
+# zstd: stdlib from 3.14 on, official backport before
+try:
+    if sys.version_info >= (3, 14):
+        from compression import zstd  # pragma: no cover
+    else:
+        from backports import zstd  # type: ignore[no-redef]  # ty: ignore[unresolved-import]  # pragma: no cover
+
+    HAS_ZSTD = True
+except ImportError:  # pragma: no cover
+    HAS_ZSTD = False
+
+BROTLI_ERRORS: Final = (brotli.error,) if HAS_BROTLI else ()
+ZSTD_ERRORS: Final = (zstd.ZstdError,) if HAS_ZSTD else ()
 
 LOGGER = logging.getLogger(__name__)
 
@@ -65,10 +99,6 @@ type HtmlInput = HtmlElement | HTTPResponse | Response | bytes | str
 
 UNICODE_ALIASES: Final = frozenset({"utf-8", "utf_8"})
 DETECT_SAMPLE: Final = 10000
-GZIP_MAGIC: Final = b"\x1f\x8b"
-BZIP_MAGIC: Final = b"BZh"
-XZ_MAGIC: Final = b"\xfd7zXZ"
-ZIP_MAGIC: Final = b"PK\x03\x04"
 
 DOCTYPE_TAG = re.compile("^< ?! ?DOCTYPE[^>]*/[^<>]*>", re.IGNORECASE)
 FAULTY_HTML = re.compile(r"(<html.*?)\s*/>", re.IGNORECASE)
@@ -93,35 +123,126 @@ RE_FILTER = re.compile(
 
 ##### DECOMPRESSION #####
 
+MAX_FILE_SIZE: Final = 20_000_000
+MAX_MEMBERS: Final = 1000
 
-def _capped(chunks: Iterable[bytes], max_size: int) -> bytes:
-    """Accumulate decompressed chunks, rejecting payloads over max_size."""
+
+def _bounded_members(raw: bytes, make_dec: Callable[[], Any], max_size: int) -> bytes:
+    "Decompress a concatenated multi-member stream, rejecting output over max_size."
     out = bytearray()
-    for chunk in chunks:
-        out += chunk
-        if len(out) > max_size:
-            message = "decompressed content exceeds MAX_FILE_SIZE"
-            raise ValueError(message)
-    return bytes(out)
+    for _ in range(MAX_MEMBERS):
+        dec = make_dec()
+        # single capped call, no flush(): pending input must stay compressed or the cap is void
+        out += dec.decompress(raw, max_size + 1 - len(out))
+        # covers cap-truncated, oversized, and incomplete streams
+        if len(out) > max_size or not dec.eof:
+            raise ValueError("oversized or incomplete compressed stream")
+        raw = dec.unused_data.lstrip(b"\0")  # NUL padding as gzip.decompress, copied each round
+        if not raw:
+            return bytes(out)
+    raise ValueError("too many compressed members")
+
+
+def _bounded_inflate(raw: bytes, max_size: int) -> bytes:
+    "Decompress a single zlib/deflate stream, ignoring trailing bytes as zlib.decompress does."
+    dec = zlib.decompressobj(zlib.MAX_WBITS)
+    out = dec.decompress(raw, max_size + 1)
+    if len(out) > max_size or not dec.eof:
+        raise ValueError("oversized or incomplete compressed stream")
+    return out
+
+
+def _bounded_unbrotli(raw: bytes, max_size: int) -> bytes:
+    "Decompress a brotli stream, output-capped at max_size."
+    dec = brotli.Decompressor()
+    out: bytes = dec.process(raw, output_buffer_limit=max_size + 1)
+    # is_finished(): non-brotli input can yield b"" without raising
+    if len(out) > max_size or not dec.is_finished():
+        raise ValueError("oversized or incomplete compressed stream")
+    return out
+
+
+def _bounded_zip(raw: bytes, max_size: int) -> bytes:
+    "First HTML member of a zip archive, read capped: the declared size is not trusted."
+    with zipfile.ZipFile(BytesIO(raw)) as archive:
+        name = next(n for n in archive.namelist() if n.lower().endswith((".html", ".htm")))
+        with archive.open(name) as member:
+            out = member.read(max_size + 1)
+    if len(out) > max_size:
+        raise ValueError("oversized compressed stream")
+    return out
+
+
+def _bounded_attempt(
+    decoder: Callable[[bytes, int], bytes], raw: bytes, max_size: int, errors: tuple[type[Exception], ...]
+) -> bytes | None:
+    "One speculative decoding, None when the payload is not in that format or is oversized."
+    try:
+        return decoder(raw, max_size)
+    except (*errors, ValueError):
+        return None
+
+
+SPECULATIVE: Final = (
+    *(((_bounded_unbrotli, BROTLI_ERRORS),) if HAS_BROTLI else ()),
+    (_bounded_inflate, (zlib.error,)),
+)
+
+
+def _bounded_speculative(raw: bytes, max_size: int) -> bytes:
+    "No magic number: brotli, then zlib/deflate; the content unchanged when neither fits."
+    return next(
+        (
+            out
+            for decoder, errors in SPECULATIVE
+            if (out := _bounded_attempt(decoder, raw, max_size, errors)) is not None
+        ),
+        raw,
+    )
+
+
+DECOMPRESSORS: Final[Mapping[bytes, Callable[[bytes, int], bytes]]] = MappingProxyType(
+    {
+        b"\x1f\x8b\x08": lambda raw, size: _bounded_members(raw, lambda: zlib.decompressobj(31), size),
+        b"BZh": lambda raw, size: _bounded_members(raw, bz2.BZ2Decompressor, size),
+        b"\xfd7zXZ\x00": lambda raw, size: _bounded_members(raw, lzma.LZMADecompressor, size),
+        b"PK\x03\x04": _bounded_zip,
+        **(
+            {b"\x28\xb5\x2f\xfd": lambda raw, size: _bounded_members(raw, zstd.ZstdDecompressor, size)}
+            if HAS_ZSTD
+            else {}
+        ),
+    }
+)
+CODEC_ERRORS: Final = (
+    OSError,
+    EOFError,
+    ValueError,
+    StopIteration,
+    zlib.error,
+    lzma.LZMAError,
+    zipfile.BadZipFile,
+    *ZSTD_ERRORS,
+)
 
 
 def handle_compressed_file(filecontent: bytes, max_size: int | None = None) -> bytes:
-    """Decompress a binary string by its magic number, capped against decompression bombs."""
-    limit = max_size if max_size is not None else 20_000_000
+    """Decompress a binary string by its magic number, output-capped at max_size against decompression bombs.
+
+    gzip, zstd, brotli and deflate as trafilatura; bz2, xz and zip on top. The content comes back
+    unchanged when it is not compressed, corrupt or oversized.
+    """
+    if not isinstance(filecontent, bytes):
+        return filecontent
+    size = MAX_FILE_SIZE if max_size is None else max_size
+    magic = next((m for m in DECOMPRESSORS if filecontent.startswith(m)), None)
+    if magic is None:
+        return _bounded_speculative(filecontent, size)
     try:
-        if filecontent.startswith(GZIP_MAGIC):
-            return _capped([gzip.decompress(filecontent)], limit)
-        if filecontent.startswith(BZIP_MAGIC):
-            return _capped([bz2.decompress(filecontent)], limit)
-        if filecontent.startswith(XZ_MAGIC):
-            return _capped([lzma.decompress(filecontent)], limit)
-        if filecontent.startswith(ZIP_MAGIC):
-            with zipfile.ZipFile(BytesIO(filecontent)) as archive:
-                members = [name for name in archive.namelist() if name.lower().endswith((".html", ".htm"))]
-                return _capped([archive.read(name) for name in members[:1]], limit)
-    except (OSError, ValueError, zipfile.BadZipFile, EOFError, lzma.LZMAError):
+        return DECOMPRESSORS[magic](filecontent, size)
+    except CODEC_ERRORS:
         LOGGER.warning("invalid or oversized compressed file")
-    return filecontent
+        return filecontent
 
 
 ##### DECODING #####
@@ -189,7 +310,7 @@ def fromstring_bytes(htmlobject: str) -> HtmlElement | None:
     "Try to pass bytes to LXML parser."
     try:
         return fromstring(htmlobject.encode("utf8", "surrogatepass"), parser=HTML_PARSER)
-    except Exception as err:  # noqa: BLE001
+    except Exception as err:
         LOGGER.error("lxml parser bytestring %s", err)
     return None
 
@@ -228,7 +349,7 @@ def load_html(htmlobject: HtmlInput, max_size: int | None = None) -> HtmlElement
         # "Unicode strings with encoding declaration are not supported."
         tree = fromstring_bytes(htmlobject)
         fallback_parse = True
-    except Exception as err:  # noqa: BLE001
+    except Exception as err:
         LOGGER.error("lxml parsing failed: %s", err)
     # second pass: try passing bytes to LXML
     if (tree is None or len(tree) < 1) and not fallback_parse:
@@ -368,3 +489,69 @@ def is_image_file(imagesrc: str | None) -> bool:
     if imagesrc is None or len(imagesrc) > 8192:
         return False
     return bool(IMAGE_EXTENSION.search(imagesrc))
+
+
+def get_base_url(url: str | SplitResult) -> str:
+    """Strip URL of some of its parts to get base URL.
+    Accepts strings and urllib.parse ParseResult objects."""
+    parsed_url = urlsplit(url) if isinstance(url, str) else url
+    if parsed_url.scheme:
+        scheme = parsed_url.scheme + "://"
+    else:
+        scheme = ""
+    return scheme + parsed_url.netloc
+
+
+def fix_relative_urls(baseurl: str, url: str) -> str:
+    "Prepend protocol and host information to relative links."
+    if url.startswith("{"):
+        return url
+
+    base_netloc = urlsplit(baseurl).netloc
+    split_url = urlsplit(url)
+
+    if split_url.netloc not in (base_netloc, ""):
+        if split_url.scheme:
+            return url
+        return urlunsplit(split_url._replace(scheme="http"))
+
+    return urljoin(baseurl, url)
+
+
+def safe_base_url(url: str) -> str:
+    "Get the base URL, empty string if malformed."
+    try:
+        return get_base_url(url)
+    except ValueError:
+        return ""
+
+
+def safe_relative_url(baseurl: str, url: str) -> str:
+    "Resolve a link against the base URL, empty string if malformed."
+    try:
+        return fix_relative_urls(baseurl, url)
+    except ValueError:
+        return ""
+
+
+HTTP_SCHEMES: Final = frozenset({"http", "https"})
+DOMAIN_REGEX: Final = re.compile(
+    r"(?:(?:f|ht)tp)s?://(?:[^/?#]{,63}\.)?([^/?#.]{4,63}\.[^/?#]{2,63}|\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}|[0-9a-f:]{16,})(?:/|$)"
+)
+STRIP_PORT_REGEX: Final = re.compile(r"(?<=\D):\d+")
+
+
+def absolute_url(url: str | None) -> str | None:
+    "The URL when it is absolute http(s), None otherwise: the only base the engine accepts."
+    try:
+        parts = urlsplit(url or "")
+    except ValueError:
+        return None
+    return url if parts.scheme in HTTP_SCHEMES and parts.netloc else None
+
+
+def extract_domain(url: str) -> str | None:
+    "Domain of a URL, as courlan's fast path finds it; the host when the pattern misses."
+    found = DOMAIN_REGEX.match(url)
+    host = found[1].split("@")[-1] if found else urlsplit(url).netloc
+    return STRIP_PORT_REGEX.sub("", host) or None
