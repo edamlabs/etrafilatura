@@ -33,7 +33,7 @@ trafilatura.extract("https://example.org/article", input_format="auto")   # exte
 
 **Benchmark** — pytest-benchmark medians against Python trafilatura 2.3.1: on the two real pages (PEP 8,
 Wikipedia), 1.2–1.5× faster plain-text extraction, 1.6–2.1× with XML and metadata, 2.7–4.4× on metadata alone.
-On small synthetic pages, under a millisecond, the Python-side tree conversion weighs more: 0.6–2.9×.
+Extraction on small synthetic pages, under a millisecond, weighs the Python-side tree conversion more: 0.6–2.9×.
 `html2txt` and `baseline` run the same vendored code on both sides and measure the noise: 0.9–1.2×
 ([full matrix and method](https://edamlabs.github.io/etrafilatura/benchmark/)).
 
