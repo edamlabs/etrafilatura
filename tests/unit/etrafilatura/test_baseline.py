@@ -42,7 +42,7 @@ def test_baseline_element_input(article: str) -> None:
     assert tree.find(".//aside") is not None
 
 
-def test_baseline_html2txt() -> None:
+def test_html2txt_clean() -> None:
     html = "<html><body><p>one</p><script>evil()</script><p>two</p></body></html>"
     cleaned = html2txt(html)
     assert "one" in cleaned
@@ -52,16 +52,16 @@ def test_baseline_html2txt() -> None:
     assert "one" in raw
 
 
-def test_baseline_html2txt_empty() -> None:
+def test_html2txt_empty() -> None:
     assert html2txt("") == ""
 
 
-def test_baseline_html2txt_no_body() -> None:
+def test_html2txt_no_body() -> None:
     assert html2txt("<feed><entry>x</entry></feed>") == ""
     tree = fromstring("<div><p>fragment content</p></div>")
     assert "fragment content" in html2txt(tree)
 
 
-def test_baseline_block_text() -> None:
+def test_block_text_paragraphs() -> None:
     element = fromstring("<div><p>block</p><p>text</p></div>")
     assert "block" in block_text(element)

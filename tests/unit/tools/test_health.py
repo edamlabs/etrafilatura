@@ -1,59 +1,58 @@
 """Dependency health verdicts: pure rules over registry and repository pulses."""
 
-from datetime import UTC, datetime, timedelta
+from collections.abc import Callable
+from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any
 
 import pytest
-from tools.health import FindingHealth, ManifestHealth, PulseHealth, RegistryHealth, VerdictHealth, evaluate_health
+from tools.health import FindingHealth, ManifestHealth, PulseHealth, RegistryHealth, VerdictHealth
 
-NOW = datetime(2026, 10, 15, tzinfo=UTC)
-
-
-def pulse(**overrides) -> PulseHealth:
-    base: dict[str, Any] = {
-        "name": "trafilatura",
-        "registry": RegistryHealth.CRATES,
-        "released": NOW - timedelta(days=30),
-        "repository": "nchapman/trafilatura-rs",
-        "archived": False,
-        "pushed": NOW - timedelta(days=3),
-    }
-    return PulseHealth(**(base | overrides))
+##### PULSE #####
 
 
-def verdicts(findings: list[FindingHealth]) -> list[VerdictHealth]:
-    return [finding.verdict for finding in findings]
+def test_pulse_evaluate_healthy(pulse_of: Callable[..., PulseHealth], now: datetime) -> None:
+    assert pulse_of().evaluate(now) == []
 
 
-def test_evaluate_healthy_dependency_has_no_findings():
-    assert evaluate_health(pulse(), NOW) == []
+def test_pulse_evaluate_archived(pulse_of: Callable[..., PulseHealth], now: datetime) -> None:
+    assert [finding.verdict for finding in pulse_of(archived=True).evaluate(now)] == [VerdictHealth.ARCHIVED]
 
 
-def test_evaluate_archived_repository():
-    assert verdicts(evaluate_health(pulse(archived=True), NOW)) == [VerdictHealth.ARCHIVED]
+def test_pulse_evaluate_missing(pulse_of: Callable[..., PulseHealth], now: datetime) -> None:
+    assert [finding.verdict for finding in pulse_of(released=None).evaluate(now)] == [VerdictHealth.MISSING]
 
 
-def test_evaluate_missing_release():
-    assert verdicts(evaluate_health(pulse(released=None), NOW)) == [VerdictHealth.MISSING]
+def test_pulse_evaluate_stale(pulse_of: Callable[..., PulseHealth], now: datetime) -> None:
+    findings = pulse_of(released=now - timedelta(days=600)).evaluate(now)
+    assert [finding.verdict for finding in findings] == [VerdictHealth.STALE]
+    assert findings[0].detail == "last release 600 days ago (2025-02-22)"
 
 
-def test_evaluate_stale_release():
-    assert verdicts(evaluate_health(pulse(released=NOW - timedelta(days=600)), NOW)) == [VerdictHealth.STALE]
+def test_pulse_evaluate_dormant(pulse_of: Callable[..., PulseHealth], now: datetime) -> None:
+    findings = pulse_of(pushed=now - timedelta(days=400)).evaluate(now)
+    assert [finding.verdict for finding in findings] == [VerdictHealth.DORMANT]
 
 
-def test_evaluate_dormant_repository():
-    assert verdicts(evaluate_health(pulse(pushed=NOW - timedelta(days=400)), NOW)) == [VerdictHealth.DORMANT]
+def test_pulse_evaluate_unknown_repository(pulse_of: Callable[..., PulseHealth], now: datetime) -> None:
+    assert pulse_of(repository=None, pushed=None).evaluate(now) == []
 
 
-def test_evaluate_unknown_repository_is_not_a_finding():
-    assert evaluate_health(pulse(repository=None, pushed=None), NOW) == []
+def test_pulse_evaluate_every_verdict(pulse_of: Callable[..., PulseHealth], now: datetime) -> None:
+    old = now - timedelta(days=900)
+    found = [finding.verdict for finding in pulse_of(archived=True, released=old, pushed=old).evaluate(now)]
+    assert found == [VerdictHealth.ARCHIVED, VerdictHealth.STALE, VerdictHealth.DORMANT]
 
 
-def test_evaluate_accumulates_every_verdict():
-    old = NOW - timedelta(days=900)
-    found = verdicts(evaluate_health(pulse(archived=True, released=old, pushed=old), NOW))
-    assert set(found) == {VerdictHealth.ARCHIVED, VerdictHealth.STALE, VerdictHealth.DORMANT}
+@pytest.mark.parametrize(
+    ("stamp", "expected"),
+    [("2026-10-15T08:00:00+00:00", datetime.fromisoformat("2026-10-15T08:00:00+00:00")), ("", None), (None, None)],
+    ids=["iso", "empty", "none"],
+)
+def test_pulse_moment(stamp: str | None, expected: datetime | None) -> None:
+    assert PulseHealth.moment(stamp) == expected
+
+
+##### MANIFEST #####
 
 
 @pytest.mark.parametrize(
@@ -65,21 +64,23 @@ def test_evaluate_accumulates_every_verdict():
         ("https://gitlab.com/owner/repo", None),
         (None, None),
     ],
+    ids=["plain", "dot-git", "fragment", "not-github", "none"],
 )
-def test_repository_from_url(url, expected):
+def test_manifest_repository_from_url(url: str | None, expected: str | None) -> None:
     assert ManifestHealth.repository(url) == expected
 
 
-def test_manifest_collects_crates_and_python_groups(tmp_path: Path):
+def test_manifest_run_crates_and_python_groups(tmp_path: Path) -> None:
     (tmp_path / "Cargo.toml").write_text(
         '[workspace.dependencies]\npyo3 = "0.29"\nhtml2markdown = "0.3"\n', encoding="utf-8"
     )
     (tmp_path / "pyproject.toml").write_text(
         '[project]\nname = "x"\ndependencies = ["msgspec>=0.19"]\n'
         '[project.optional-dependencies]\nocr = ["liteparse>=2.16"]\nfull = ["x[ocr]"]\n'
-        '[dependency-groups]\ntest = ["pytest>=9.1", "hypothesis[cli]>=6"]\ndev = [{ include-group = "test" }, "prek>=0.4"]\n'
+        '[dependency-groups]\ntest = ["pytest>=9.1", "hypothesis[cli]>=6"]\ndev = [{ include-group = "test" }, "prek>=0.4"]\n',
+        encoding="utf-8",
     )
-    found = {(name, registry) for name, registry in ManifestHealth(tmp_path).run()}
+    found = set(ManifestHealth(tmp_path).run())
     assert found == {
         ("pyo3", RegistryHealth.CRATES),
         ("html2markdown", RegistryHealth.CRATES),
@@ -91,7 +92,9 @@ def test_manifest_collects_crates_and_python_groups(tmp_path: Path):
     }
 
 
-def test_report_lists_findings_as_table():
-    findings = evaluate_health(pulse(archived=True), NOW)
-    report = FindingHealth.report(findings)
+##### FINDING #####
+
+
+def test_finding_report_table(pulse_of: Callable[..., PulseHealth], now: datetime) -> None:
+    report = FindingHealth.report(pulse_of(archived=True).evaluate(now))
     assert "| trafilatura | crates | archived |" in report

@@ -71,4 +71,5 @@ nav:
       - Upstream and versioning: upstream.md
       - Self-maintenance: maintenance.md
       - Development: development.md
+      - Decisions: decisions.md
       - Changelog: changelog.md

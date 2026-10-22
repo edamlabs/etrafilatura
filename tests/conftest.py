@@ -4,6 +4,7 @@ import functools
 import gzip
 import http.server
 import threading
+from collections.abc import Callable, Iterator
 from configparser import ConfigParser
 from pathlib import Path
 from typing import Any, Final
@@ -29,7 +30,7 @@ def resources() -> Path:
 
 
 @pytest.fixture(scope="session")
-def page_of() -> object:
+def page_of() -> Callable[[str], str]:
     """Reader returning the source of an HTML fixture by filename."""
 
     def _read(name: str) -> str:
@@ -45,31 +46,31 @@ def article() -> str:
 
 
 @pytest.fixture(scope="session")
-def comments_page(page_of) -> str:  # type: ignore[no-untyped-def]
+def comments_page(page_of: Callable[[str], str]) -> str:
     """An article page with a comments section and JSON-LD metadata."""
     return page_of("comments.html")
 
 
 @pytest.fixture(scope="session")
-def metadata_page(page_of) -> str:  # type: ignore[no-untyped-def]
+def metadata_page(page_of: Callable[[str], str]) -> str:
     """A Spanish page rich in meta, OpenGraph and JSON-LD metadata."""
     return page_of("metadata.html")
 
 
 @pytest.fixture(scope="session")
-def tables_page(page_of) -> str:  # type: ignore[no-untyped-def]
+def tables_page(page_of: Callable[[str], str]) -> str:
     """An article page built around a table."""
     return page_of("tables.html")
 
 
 @pytest.fixture(scope="session")
-def minimal_page(page_of) -> str:  # type: ignore[no-untyped-def]
+def minimal_page(page_of: Callable[[str], str]) -> str:
     """A page with almost no content."""
     return page_of("minimal.html")
 
 
 @pytest.fixture(scope="session")
-def empty_page(page_of) -> str:  # type: ignore[no-untyped-def]
+def empty_page(page_of: Callable[[str], str]) -> str:
     """A page with an empty body."""
     return page_of("empty.html")
 
@@ -78,20 +79,19 @@ def empty_page(page_of) -> str:  # type: ignore[no-untyped-def]
 
 
 @pytest.fixture
-def make_config() -> object:
+def make_config() -> Callable[..., ConfigParser]:
     """Factory returning a ConfigParser seeded with the defaults plus overrides."""
 
     def _make(**overrides: str) -> ConfigParser:
         config = use_config()
-        for key, value in overrides.items():
-            config.set("DEFAULT", key.upper(), value)
+        config.read_dict({"DEFAULT": {key.upper(): value for key, value in overrides.items()}})
         return config
 
     return _make
 
 
 @pytest.fixture(autouse=True)
-def reset_lru() -> object:
+def reset_lru() -> Iterator[None]:
     """The global dedup cache never leaks between tests."""
     yield
     LRU_TEST.clear()
@@ -144,7 +144,7 @@ class _Handler(http.server.BaseHTTPRequestHandler):
 
 
 @pytest.fixture(scope="session")
-def server() -> object:
+def server() -> Iterator[str]:
     """A local HTTP server on a random port; yields its base URL."""
     httpd = http.server.ThreadingHTTPServer(("127.0.0.1", 0), _Handler)
     httpd.daemon_threads = True

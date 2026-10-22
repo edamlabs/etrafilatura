@@ -8,9 +8,10 @@ contributors; see NOTICE.md. The extraction pipeline itself runs in the Rust eng
 import json
 import logging
 import warnings
+from configparser import ConfigParser
 from copy import copy
 from os import PathLike
-from typing import Any
+from typing import Any, Final
 
 from lxml.etree import XPath, strip_tags
 
@@ -26,8 +27,10 @@ from etrafilatura.xml import build_json_output, control_xml_output, delete_eleme
 
 LOGGER = logging.getLogger(__name__)
 
-TXT_FORMATS = {"markdown", "txt"}
-_YAML_FIELDS = "title author url hostname description sitename date categories tags fingerprint id license".split()
+TXT_FORMATS: Final = frozenset({"markdown", "txt"})
+_YAML_FIELDS: Final = tuple(
+    "title author url hostname description sitename date categories tags fingerprint id license".split()
+)
 
 # Metadata is emitted as a YAML-style Markdown header; values such as a title
 # containing ": " (or a leading indicator, or a reserved word) otherwise produce
@@ -142,7 +145,7 @@ def bare_extraction(
     author_blacklist: set[str] | None = None,
     as_dict: bool = False,
     prune_xpath: str | list[str] | None = None,
-    config: Any = DEFAULT_CONFIG,
+    config: ConfigParser = DEFAULT_CONFIG,
     options: Extractor | None = None,
     *,
     input_format: str = "html",
@@ -338,13 +341,13 @@ def _internal_extraction(
     author_blacklist: set[str] | None = None,
     settingsfile: str | None = None,
     prune_xpath: str | list[str] | None = None,
-    config: Any = DEFAULT_CONFIG,
+    config: ConfigParser = DEFAULT_CONFIG,
     options: Extractor | None = None,
     *,
     input_format: str = "html",
 ) -> Document | None:
     """Internal method to do the extraction"""
-    # stacklevel=4 → user → extract → _internal_extraction → _check_deprecation
+    ### stacklevel=4: user → extract → _internal_extraction → _check_deprecation.
     fast = _check_deprecation(
         fast,
         no_fallback=no_fallback,
@@ -353,7 +356,6 @@ def _internal_extraction(
         stacklevel=4,
     )
 
-    # regroup extraction options
     if not options or not isinstance(options, Extractor):
         options = Extractor(
             config=use_config(settingsfile) if settingsfile else config,
@@ -377,7 +379,6 @@ def _internal_extraction(
             date_params=date_extraction_params,
         )
 
-    # extraction
     document = bare_extraction(
         filecontent,
         options=options,
@@ -386,18 +387,16 @@ def _internal_extraction(
         input_format=input_format,
     )
 
-    # post-processing
     if not isinstance(document, Document):
         return None
 
-    # TXT formats only output the ID and fingerprint in their metadata header
+    ### TXT formats only output the ID and fingerprint in their metadata header.
     if options.format not in TXT_FORMATS or options.with_metadata:
         if options.format == "python":
             message = "'python' format only usable in bare_extraction() function"
             raise ValueError(message)
-        # add record ID to metadata
         document.id = record_id
-        # calculate fingerprint (raw_text is always set by the engine sequence)
+        ### raw_text is always set by the engine sequence.
         document.fingerprint = content_fingerprint(f"{document.title} {document.raw_text}")
 
     document.text = determine_returnstring(document, options)
@@ -429,7 +428,7 @@ def extract(
     author_blacklist: set[str] | None = None,
     settingsfile: str | None = None,
     prune_xpath: str | list[str] | None = None,
-    config: Any = DEFAULT_CONFIG,
+    config: ConfigParser = DEFAULT_CONFIG,
     options: Extractor | None = None,
     *,
     input_format: str = "html",
@@ -473,7 +472,7 @@ def extract(
     Returns:
         A string in the desired format or None.
     """
-    # must stay the first statement: a signature drift raises TypeError
+    ### Must stay the first statement: a signature drift raises TypeError.
     document = _internal_extraction(**locals())
     return document.text if document is not None else None
 
@@ -499,7 +498,7 @@ def extract_with_metadata(
     author_blacklist: set[str] | None = None,
     settingsfile: str | None = None,
     prune_xpath: str | list[str] | None = None,
-    config: Any = DEFAULT_CONFIG,
+    config: ConfigParser = DEFAULT_CONFIG,
     options: Extractor | None = None,
     *,
     input_format: str = "html",
