@@ -51,7 +51,7 @@ try:
     else:
         from backports import zstd  # type: ignore[no-redef]  # ty: ignore[unresolved-import]  # pragma: no cover
 
-    HAS_ZSTD = True
+    HAS_ZSTD = True  # pragma: no cover
 except ImportError:  # pragma: no cover
     HAS_ZSTD = False
 
