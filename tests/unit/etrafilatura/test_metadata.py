@@ -23,7 +23,7 @@ def test_metadata_full_page(metadata_page: str) -> None:
 def test_metadata_default_url(minimal_page: str) -> None:
     document = extract_metadata(minimal_page, default_url="https://fallback.example.org/page")
     assert document.url == "https://fallback.example.org/page"
-    assert document.hostname == "fallback.example.org"
+    assert document.hostname == "example.org"
 
 
 def test_metadata_empty_input() -> None:

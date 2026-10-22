@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help build build-release test lint format types arch check cargo-fmt clean dist stress integration suite publish docs serve cov licenses health apidiff fidelity benchmark
+.PHONY: help build build-release test lint format types arch check cargo-fmt clean dist stress integration suite publish docs serve cov licenses health apidiff fidelity parity benchmark
 
 help:             ## list targets
 	@awk 'BEGIN{FS=":.*## "} /^[a-z][a-zA-Z0-9_-]*:.*##/ {printf "  \033[32m%-14s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -41,6 +41,9 @@ cov:              ## Rust line coverage driven by the Python suite (gate: 90%)
 
 fidelity:         ## extraction agreement vs Python trafilatura (ARGS=--update rewrites baseline)
 	uv run --group bench python -m tools.fidelity $(ARGS)
+
+parity:           ## rewrite the byte-parity goldens from Python trafilatura (tests/resources/parity)
+	uv run --group bench python -m tools.parity
 
 benchmark:        ## etrafilatura vs trafilatura timings -> docs/benchmark.md + chart
 	uv run --group bench pytest -m bench -q -p no:randomly -p no:cacheprovider --benchmark-json=bench.json

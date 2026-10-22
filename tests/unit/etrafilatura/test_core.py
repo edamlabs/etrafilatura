@@ -2,6 +2,8 @@
 
 import json
 import logging
+from pathlib import Path
+from typing import Final
 from xml.dom.minidom import parseString
 
 import pytest
@@ -132,6 +134,29 @@ def test_core_extract_max_tree_size_rejected(article: str) -> None:
 def test_core_extract_max_tree_size_config(article: str, make_config) -> None:  # type: ignore[no-untyped-def]
     config = make_config(MAX_TREE_SIZE="1")  # type: ignore[operator]
     assert extract(article, config=config) is None  # type: ignore[arg-type]
+
+
+def test_extract_max_tree_size_within(article: str, make_config) -> None:  # type: ignore[no-untyped-def]
+    assert extract(article, config=make_config(MAX_TREE_SIZE="100000")) is not None  # type: ignore[operator, arg-type]
+
+
+def test_extract_max_tree_size_stripped(page_of, make_config) -> None:  # type: ignore[no-untyped-def]
+    page = page_of("real_pep8.html")  # type: ignore[operator]
+    document = bare_extraction(page, include_formatting=True)
+    assert isinstance(document, Document)
+    body = document.body
+    unformatted = len(body) - sum(child.tag == "hi" for child in body)
+    assert unformatted < len(body)
+    config = make_config(MAX_TREE_SIZE=str(unformatted))  # type: ignore[operator]
+    assert extract(page, include_formatting=True, config=config) is not None  # type: ignore[arg-type]
+    assert extract(page, include_formatting=True, config=make_config(MAX_TREE_SIZE=str(unformatted - 1))) is None  # type: ignore[operator, arg-type]
+
+
+def test_determine_returnstring_without_comments_tree(article: str) -> None:
+    document = bare_extraction(article)
+    assert isinstance(document, Document)
+    document.commentsbody = None  # ty: ignore[invalid-assignment]
+    assert determine_returnstring(document, Extractor(output_format="txt"))
 
 
 ##### extract: configuration #####
@@ -295,7 +320,55 @@ def test_core_rejection_logged(article: str, caplog: pytest.LogCaptureFixture) -
         ('say "hi"', 'say "hi"'),
         ("back\\slash", "back\\slash"),
         ("tab\there", '"tab\\there"'),
+        ("Café: crème brûlée", '"Café: crème brûlée"'),
     ],
+    ids=["plain", "colon", "reserved", "trailing-colon", "hash", "quotes", "backslash", "control", "non-ascii"],
 )
 def test_core_yaml_scalar(value: str, expected: str) -> None:
     assert _yaml_scalar(value) == expected
+
+
+##### PARITY WITH TRAFILATURA #####
+
+GOLDEN_DIR: Final = Path(__file__).parents[2] / "resources" / "parity"
+HTML_DIR: Final = Path(__file__).parents[2] / "resources" / "html"
+DATE_PARAMS: Final = {"original_date": True, "extensive_search": True, "max_date": "2026-10-22"}
+TEI_VERSION: Final = "deliberate: <application> names etrafilatura's version, not trafilatura's"
+ENGINE_TAGS: Final = "engine: tags from JSON-LD keywords, meta keywords split on commas"
+DIVERGENCES: Final = {
+    **{(page, key): TEI_VERSION for page in ("article", "minimal", "tables") for key in ("xmltei", "xmltei+metadata")},
+    **{
+        (page, key): ENGINE_TAGS
+        for page in ("comments", "metadata")
+        for key in (
+            "txt+metadata",
+            "markdown+metadata",
+            "json+metadata",
+            "xml+metadata",
+            "xmltei",
+            "xmltei+metadata",
+            "html+metadata",
+        )
+    },
+}
+PARITY_CASES: Final = [
+    pytest.param(
+        page.stem,
+        key,
+        expected,
+        id=f"{page.stem}-{key}",
+        marks=[pytest.mark.xfail(strict=True, reason=reason)] if (reason := DIVERGENCES.get((page.stem, key))) else [],
+    )
+    for page in sorted(GOLDEN_DIR.glob("*.json"))
+    for key, expected in json.loads(page.read_text(encoding="utf-8")).items()
+]
+
+
+@pytest.mark.parametrize(("page", "key", "expected"), PARITY_CASES)
+def test_extract_parity(page: str, key: str, expected: str | None) -> None:
+    output_format, _, metadata = key.partition("+")
+    html = (HTML_DIR / f"{page}.html").read_text(encoding="utf-8")
+    assert (
+        extract(html, output_format=output_format, with_metadata=bool(metadata), date_extraction_params=DATE_PARAMS)
+        == expected
+    )

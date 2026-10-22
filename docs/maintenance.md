@@ -50,7 +50,7 @@ After CI on a Renovate branch, a Qwen agent (instructions in `QWEN.md`) runs in 
 - **expose** — CI passed but the engine's public Rust API gained items: expose them in Python.
 
 Guardrails: it edits files, the workflow commits — through an allowlist (`crates/native/src/`,
-`src/etrafilatura/`, `tests/`, `docs/` except the `docs/fidelity.json` baseline, changelog, readme); renames
+`src/etrafilatura/`, `tests/` except the `tests/resources/parity/` goldens, `docs/` except the `docs/fidelity.json` baseline, changelog, readme); renames
 are checked on both paths. Edits outside it are discarded and reported on the PR. Maximum 3 attempts, then the
 PR is labelled `needs-human`. It never merges.
 

@@ -54,6 +54,7 @@ test = [
     "pytest-randomly>=5.0",
     "pytest-timeout>=2.4",
     "hypothesis>=6.150",
+    "brotli>=1.2",
 ]
 bench = [
     "trafilatura>=2.3",
@@ -104,13 +105,13 @@ ignore = ["E501", "ISC001", "PLR0913"]
 "tests/**" = ["S101", "PLR2004", "ARG", "FBT", "S318", "EM101", "EM102"]
 "tools/*.py" = ["S310", "PLR2004"]
 # The public surface mirrors trafilatura's positional-bool signatures verbatim: drop-in beats house style there.
-"src/etrafilatura/core.py" = ["FBT001", "FBT002", "FBT003", "PLR0917", "PLR0912"]
+"src/etrafilatura/core.py" = ["FBT001", "FBT002", "FBT003", "PLR0917", "PLR0912", "PLR0915", "SIM905"]
 "src/etrafilatura/baseline.py" = ["FBT001", "FBT002"]
 "src/etrafilatura/downloads.py" = ["FBT001", "FBT002"]
 "src/etrafilatura/metadata.py" = ["FBT001", "FBT002"]
 "src/etrafilatura/settings.py" = ["FBT001", "FBT002"]
 # utils.py carries verbatim trafilatura helpers (NOTICE.md): their shape is the contract.
-"src/etrafilatura/utils.py" = ["FBT001", "FBT002", "FBT003", "EM101", "PLR2004", "SIM102"]
+"src/etrafilatura/utils.py" = ["FBT001", "FBT002", "FBT003", "EM101", "PLR2004", "SIM102", "SIM108", "BLE001"]
 "src/etrafilatura/xml.py" = ["FBT001", "FBT002", "S318"]
 
 [tool.ruff.lint.isort]

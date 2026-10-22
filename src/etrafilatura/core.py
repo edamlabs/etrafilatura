@@ -5,17 +5,16 @@
 contributors; see NOTICE.md. The extraction pipeline itself runs in the Rust engine.
 """
 
+import json
 import logging
 import warnings
 from copy import copy
-from json import dumps as json_dumps
-from typing import TYPE_CHECKING, Any, Final
+from typing import Any
 
-from lxml.etree import XPath, tostring
-from lxml.html import fragment_fromstring
+from lxml.etree import XPath, strip_tags
 
-from etrafilatura import _native
 from etrafilatura.deduplication import LRUCache, content_fingerprint, duplicate_test
+from etrafilatura.engine import NativeEngine
 from etrafilatura.errors import ExtractionError
 from etrafilatura.htmlprocessing import build_html_output, prune_unwanted_nodes
 from etrafilatura.metadata import extract_metadata
@@ -23,28 +22,10 @@ from etrafilatura.settings import DEFAULT_CONFIG, Document, Extractor, use_confi
 from etrafilatura.utils import HtmlInput, load_html, normalize_unicode
 from etrafilatura.xml import build_json_output, control_xml_output, delete_element, keeps_empty, xmltocsv, xmltotxt
 
-if TYPE_CHECKING:
-    from lxml.etree import _Element
-    from lxml.html import HtmlElement
+LOGGER = logging.getLogger(__name__)
 
-LOGGER = logging.getLogger(__package__)
-
-# recall escalation constants live in the engine; the output contract is trafilatura's.
-TXT_FORMATS: Final = {"markdown", "txt"}
-_YAML_FIELDS = [
-    "title",
-    "author",
-    "url",
-    "hostname",
-    "description",
-    "sitename",
-    "date",
-    "categories",
-    "tags",
-    "fingerprint",
-    "id",
-    "license",
-]
+TXT_FORMATS = {"markdown", "txt"}
+_YAML_FIELDS = "title author url hostname description sitename date categories tags fingerprint id license".split()
 
 # Metadata is emitted as a YAML-style Markdown header; values such as a title
 # containing ": " (or a leading indicator, or a reserved word) otherwise produce
@@ -66,7 +47,7 @@ def _yaml_scalar(value: str) -> str:
     ):
         return value
     # a JSON string is always a valid, exactly round-tripping YAML double-quoted scalar
-    return json_dumps(value)
+    return json.dumps(value, ensure_ascii=False)
 
 
 def determine_returnstring(document: Document, options: Extractor) -> str:
@@ -100,8 +81,8 @@ def determine_returnstring(document: Document, options: Extractor) -> str:
             )
             header = f"---\n{fields}---\n"
         returnstring = f"{header}{xmltotxt(document.body, options.formatting)}"
-        ### commentsbody is always a tree (Document defaults it to <body/>): the append is unconditional.
-        returnstring = f"{returnstring}\n{xmltotxt(document.commentsbody, options.formatting)}".strip()
+        if document.commentsbody is not None:
+            returnstring = f"{returnstring}\n{xmltotxt(document.commentsbody, options.formatting)}".strip()
     # normalize Unicode format (defaults to NFC)
     return normalize_unicode(returnstring)
 
@@ -131,47 +112,6 @@ def _check_deprecation(
         message = '"max_tree_size" will be removed, use settings.cfg instead'
         raise ValueError(message)
     return fast or no_fallback
-
-
-##### ENGINE BRIDGE #####
-
-
-def _engine_options(options: Extractor) -> dict[str, Any]:
-    """Native keyword arguments derived from the extractor configuration."""
-    return {
-        "url": options.url,
-        "target_language": options.lang,
-        "fallback": not options.fast,
-        "focus": options.focus,
-        "comments": options.comments,
-        "tables": options.tables,
-        "images": options.images,
-        "links": options.links,
-        "excluded_authors": sorted(options.author_blacklist),
-        "deduplicate": bool(options.dedup),
-        "essential_metadata": options.only_with_metadata,
-        "max_tree_size": options.max_tree_size,
-        "date_mode": "extensive" if options.date_params.get("extensive_search") else "fast",
-        "min_extracted_size": options.min_extracted_size,
-        "min_output_size": options.min_output_size,
-        "min_output_comment_size": options.min_output_comm_size,
-        "min_duplicate_check_size": options.min_duplcheck_size,
-        "max_duplicate_count": options.max_repetitions,
-    }
-
-
-def _engine_sequence(
-    tree: "HtmlElement", options: Extractor, prune_xpath: str | list[str] | None
-) -> tuple["_Element", str, "_Element", str]:
-    """One extraction through the Rust engine: pruned tree in, trafilatura-shaped trees and texts out."""
-    if prune_xpath is not None:
-        expressions = [prune_xpath] if isinstance(prune_xpath, str) else list(prune_xpath)
-        tree = prune_unwanted_nodes(tree, [XPath(expression) for expression in expressions])
-    html = tostring(tree, encoding="unicode", method="html")
-    result = _native.extract_html(html, **_engine_options(options))
-    postbody = fragment_fromstring(result.content_html, create_parent="body")
-    commentsbody = fragment_fromstring(result.comments_html, create_parent="body")
-    return postbody, result.content_text, commentsbody, result.metadata.language
 
 
 ##### EXTRACTION #####
@@ -302,9 +242,41 @@ def bare_extraction(
         else:
             document = Document()
 
-        postbody, temp_text, commentsbody, language = _engine_sequence(tree, options, prune_xpath)
+        # prune all xpath expressions that user specified
+        # no backup as this is unetre full control of the user
+        if prune_xpath is not None:
+            if isinstance(prune_xpath, str):
+                prune_xpath = [prune_xpath]
+            tree = prune_unwanted_nodes(tree, [XPath(x) for x in prune_xpath])
 
-        ### Tree size and minimum sizes are enforced by the engine (TreeTooLargeError / InsufficientContentError).
+        postbody, temp_text, commentsbody, temp_comments, language = NativeEngine().run(
+            tree, options, options.url or document.url
+        )
+        len_text, len_comments = len(temp_text), len(temp_comments)
+
+        # tree size sanity check
+        if options.max_tree_size:
+            # strip tags
+            if len(postbody) > options.max_tree_size:
+                LOGGER.debug("output tree too long: %s", len(postbody))
+                strip_tags(postbody, "hi")
+            # still too long, raise an error
+            if len(postbody) > options.max_tree_size:
+                LOGGER.debug(
+                    "output tree too long: %s, discarding %s",
+                    len(postbody),
+                    options.source,
+                )
+                raise ValueError
+        # size checks
+        if len_text < options.min_output_size and len_comments < options.min_output_comm_size:
+            LOGGER.debug(
+                "text and comments not long enough: %s %s %s",
+                len_text,
+                len_comments,
+                options.source,
+            )
+            raise ValueError
 
         # check duplicates at body level
         if options.dedup and duplicate_test(postbody, options) is True:

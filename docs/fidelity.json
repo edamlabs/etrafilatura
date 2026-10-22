@@ -1,5 +1,12 @@
 {
-  "format:markdown": 0.9383110615535125,
-  "format:txt": 0.9396747993680898,
-  "metadata": 0.975
+  "exact:csv": 0.75,
+  "exact:html": 0.75,
+  "exact:json": 0.75,
+  "exact:markdown": 0.75,
+  "exact:txt": 0.75,
+  "exact:xml": 0.75,
+  "exact:xmltei": 0.125,
+  "format:markdown": 0.9960185244659883,
+  "format:txt": 0.9953493678638896,
+  "metadata": 0.9583333333333333
 }

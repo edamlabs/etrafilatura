@@ -4,18 +4,28 @@ import bz2
 import gzip
 import lzma
 import zipfile
+import zlib
 from io import BytesIO
+from typing import Final
 
+import brotli
 import pytest
 from lxml.etree import Element
 from lxml.html import fromstring
 
+from etrafilatura import utils
 from etrafilatura.utils import (
+    HAS_ZSTD,
+    MAX_MEMBERS,
     Response,
+    absolute_url,
     as_list,
     decode_file,
     detect_encoding,
+    extract_domain,
+    fix_relative_urls,
     fromstring_bytes,
+    get_base_url,
     handle_compressed_file,
     image_src,
     is_dubious_html,
@@ -25,6 +35,8 @@ from etrafilatura.utils import (
     normalize_unicode,
     remove_control_characters,
     repair_faulty_html,
+    safe_base_url,
+    safe_relative_url,
     sanitize,
     sanitize_tree,
     text_chars_test,
@@ -69,41 +81,51 @@ def test_utils_response_headers_and_decode() -> None:
 
 ##### compression #####
 
-
-def test_utils_compressed_gzip() -> None:
-    payload = b"<html>hello</html>"
-    assert handle_compressed_file(gzip.compress(payload)) == payload
+PAYLOAD: Final = b"<html>hello</html>"
 
 
-def test_utils_compressed_bzip2() -> None:
-    payload = b"<html>hello</html>"
-    assert handle_compressed_file(bz2.compress(payload)) == payload
-
-
-def test_utils_compressed_xz() -> None:
-    payload = b"<html>hello</html>"
-    assert handle_compressed_file(lzma.compress(payload)) == payload
-
-
-def test_utils_compressed_zip() -> None:
+def zip_of(name: str, content: bytes) -> bytes:
+    """A one-member zip archive."""
     buffer = BytesIO()
-    with zipfile.ZipFile(buffer, "w") as archive:
-        archive.writestr("page.html", "<html>zipped</html>")
-    assert handle_compressed_file(buffer.getvalue()) == b"<html>zipped</html>"
+    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
+        archive.writestr(name, content)
+    return buffer.getvalue()
 
 
-def test_utils_compressed_broken() -> None:
-    broken = b"\x1f\x8bnot-gzip"
-    assert handle_compressed_file(broken) == broken
+CODECS: Final = {
+    "gzip": gzip.compress,
+    "gzip-multimember": lambda data: gzip.compress(data[:6]) + gzip.compress(data[6:]),
+    "bzip2": bz2.compress,
+    "xz": lzma.compress,
+    "zip": lambda data: zip_of("page.html", data),
+    "deflate": zlib.compress,
+    "brotli": brotli.compress,
+    **({"zstd": utils.zstd.compress} if HAS_ZSTD else {}),
+}
 
 
-def test_utils_compressed_bomb() -> None:
-    payload = gzip.compress(b"x" * 5000)
-    assert handle_compressed_file(payload, max_size=100) == payload
+@pytest.mark.parametrize("codec", list(CODECS), ids=list(CODECS))
+def test_compressed_roundtrip(codec: str) -> None:
+    assert handle_compressed_file(CODECS[codec](PAYLOAD)) == PAYLOAD
 
 
-def test_utils_compressed_plain_passthrough() -> None:
-    assert handle_compressed_file(b"<html></html>") == b"<html></html>"
+@pytest.mark.parametrize("codec", list(CODECS), ids=list(CODECS))
+def test_compressed_bomb_unchanged(codec: str) -> None:
+    bomb = CODECS[codec](b"x" * 5000)
+    assert handle_compressed_file(bomb, max_size=100) == bomb
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [b"\x1f\x8b\x08not-gzip", zip_of("notes.txt", PAYLOAD), b"<html></html>", gzip.compress(b"x") * (MAX_MEMBERS + 1)],
+    ids=["corrupt-gzip", "zip-without-html", "plain", "too-many-members"],
+)
+def test_compressed_unchanged(payload: bytes) -> None:
+    assert handle_compressed_file(payload) == payload
+
+
+def test_compressed_text_passthrough() -> None:
+    assert handle_compressed_file("<html></html>") == "<html></html>"  # ty: ignore[invalid-argument-type]
 
 
 ##### decoding #####
@@ -287,3 +309,57 @@ def test_utils_textfilter() -> None:
     assert textfilter(keep) is False
     empty = Element("p")
     assert textfilter(empty) is True
+
+
+##### URLS #####
+
+
+@pytest.mark.parametrize(
+    ("url", "expected"),
+    [
+        ("https://en.wikipedia.org/wiki/X", "wikipedia.org"),
+        ("https://example.org:8443/a", "example.org"),
+        ("http://192.168.1.10/a", "192.168.1.10"),
+        ("https://www.bbc.co.uk/news", "www.bbc.co.uk"),
+        ("http://localhost:8080/x", "localhost"),
+    ],
+    ids=["subdomain", "port", "ipv4", "multipart-tld-host", "no-dot-host"],
+)
+def test_extract_domain(url: str, expected: str) -> None:
+    assert extract_domain(url) == expected
+
+
+@pytest.mark.parametrize(
+    ("url", "expected"),
+    [
+        ("https://example.org/x", "https://example.org/x"),
+        ("not a url", None),
+        (None, None),
+        ("ftp://example.org/x", None),
+        ("http://[::1", None),
+    ],
+    ids=["absolute", "relative", "none", "other-scheme", "malformed"],
+)
+def test_absolute_url(url: str | None, expected: str | None) -> None:
+    assert absolute_url(url) == expected
+
+
+@pytest.mark.parametrize(
+    ("base", "url", "expected"),
+    [
+        ("https://example.org/a/", "b/c", "https://example.org/a/b/c"),
+        ("https://example.org", "//cdn.example.com/x", "http://cdn.example.com/x"),
+        ("https://example.org", "{tpl}", "{tpl}"),
+        ("https://example.org", "https://other.org/x", "https://other.org/x"),
+    ],
+    ids=["relative", "scheme-relative", "template", "external"],
+)
+def test_fix_relative_urls(base: str, url: str, expected: str) -> None:
+    assert fix_relative_urls(base, url) == expected
+
+
+def test_safe_urls() -> None:
+    assert get_base_url("https://example.org/a/b?c") == "https://example.org"
+    assert get_base_url("example.org/a") == ""
+    assert safe_base_url("http://[::1") == ""
+    assert safe_relative_url("https://example.org", "http://[::1") == ""

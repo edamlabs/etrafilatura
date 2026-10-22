@@ -25,7 +25,8 @@ MINI: Final = ROOT / "docs" / "assets" / "fidelity-mini.svg"
 TOLERANCE: Final = 0.05
 
 FORMATS: Final = ("txt", "markdown")
-META_FIELDS: Final = ("title", "author", "date", "sitename", "url")
+EXACT_FORMATS: Final = ("txt", "markdown", "json", "xml", "xmltei", "csv", "html")
+META_FIELDS: Final = ("title", "author", "date", "sitename", "url", "hostname", "categories", "tags", "pagetype")
 
 
 def tokens(text: str) -> tuple[str, ...]:
@@ -34,11 +35,9 @@ def tokens(text: str) -> tuple[str, ...]:
 
 
 def agreement(ours: str | None, theirs: str | None) -> float | None:
-    """Token agreement between the two extractions; None when trafilatura refuses the page."""
-    if theirs is None:
-        return None
-    if ours is None:
-        return 0.0
+    """Token agreement between the two extractions: whitespace- and markup-blind, a refusal on one side only scores 0."""
+    if theirs is None or ours is None:
+        return 1.0 if ours is theirs else 0.0
     a, b = tokens(ours), tokens(theirs)
     if not b:
         return 1.0 if not a else 0.0
@@ -53,6 +52,12 @@ def measure_page(html: str) -> dict[str, float | None]:
             trafilatura.extract(html, output_format=name),
         )
         for name in FORMATS
+    }
+    scores |= {
+        f"exact:{name}": float(
+            etrafilatura.extract(html, output_format=name) == trafilatura.extract(html, output_format=name)
+        )
+        for name in EXACT_FORMATS
     }
     ours = etrafilatura.extract_metadata(html)
     theirs = trafilatura.extract_metadata(html)
@@ -138,7 +143,7 @@ def main() -> int:
     baseline = json.loads(BASELINE.read_text(encoding="utf-8")) if BASELINE.exists() else {}
     regressions = compare(averaged, baseline)
     report(scores)
-    sys.stdout.write("\n".join(f"{name:<16} {value:.1%}\n" for name, value in averaged.items() if value is not None))
+    sys.stdout.write("".join(f"{name:<16} {value:.1%}\n" for name, value in averaged.items() if value is not None))
     if arguments.update:
         BASELINE.write_text(json.dumps(averaged, indent=2) + "\n", encoding="utf-8")
         CHART.parent.mkdir(parents=True, exist_ok=True)

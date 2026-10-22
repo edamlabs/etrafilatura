@@ -11,7 +11,7 @@ from urllib.parse import urlparse
 import urllib3
 
 from etrafilatura.settings import DEFAULT_CONFIG, Extractor
-from etrafilatura.utils import Response
+from etrafilatura.utils import MAX_FILE_SIZE, Response
 
 LOGGER = logging.getLogger(__package__)
 
@@ -67,7 +67,7 @@ def create_pool(**kwargs: Any) -> urllib3.PoolManager:
 def _initiate_pool(config: ConfigParser, no_ssl: bool = False) -> urllib3.PoolManager:
     """Return the shared pool for these download settings, creating it on first use."""
     timeout = config.getint("DEFAULT", "DOWNLOAD_TIMEOUT", fallback=30)
-    max_size = config.getint("DEFAULT", "MAX_FILE_SIZE", fallback=20_000_000)
+    max_size = config.getint("DEFAULT", "MAX_FILE_SIZE", fallback=MAX_FILE_SIZE)
     key = (no_ssl, timeout, max_size)
     pool = _POOLS.get(key)
     if pool is None:
@@ -101,7 +101,7 @@ def _vet_host(url: str, config: ConfigParser) -> None:
 def _send_request(url: str, config: ConfigParser, *, no_ssl: bool) -> Response:
     """One GET request, capped at MAX_FILE_SIZE bytes."""
     _vet_host(url, config)
-    max_size = config.getint("DEFAULT", "MAX_FILE_SIZE", fallback=20_000_000)
+    max_size = config.getint("DEFAULT", "MAX_FILE_SIZE", fallback=MAX_FILE_SIZE)
     pool = _initiate_pool(config, no_ssl)
     raw = pool.request("GET", url, preload_content=False)
     try:
