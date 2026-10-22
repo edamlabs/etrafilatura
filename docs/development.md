@@ -38,6 +38,7 @@ suite, and re-synced from trafilatura releases rather than edited.
 | `make suite` | everything including stress and integration, one coverage gate |
 | `make cov` | Rust line coverage driven by the Python suite (gate 90 %) |
 | `make fidelity` | extraction agreement vs Python trafilatura (`ARGS=--update` rewrites the baseline) |
+| `make benchmark` | pytest-benchmark vs Python trafilatura; regenerates `docs/benchmark.md` and its chart |
 | `make licenses` | regenerate `THIRD_PARTY_LICENSES.md` from the Rust dependency tree |
 | `make health` | dependency health report |
 | `make apidiff OLD=x NEW=y` | engine public API diff between two crate versions |

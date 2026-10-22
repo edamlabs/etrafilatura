@@ -63,6 +63,7 @@ plugins:
 nav:
   - Home: index.md
   - Outputs: outputs.md
+  - Benchmark: benchmark.md
   - API: api.md
   - Errors: errors.md
   - Compatibility: compatibility.md

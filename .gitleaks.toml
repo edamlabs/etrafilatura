@@ -1,0 +1,7 @@
+# gitleaks: captured real web pages as fixtures trip generic-api-key heuristics on their markup.
+[allowlist]
+description = "Test fixtures and vendored data are captured upstream content, not secrets."
+paths = [
+    '''tests/resources/''',
+    '''src/etrafilatura/data/''',
+]

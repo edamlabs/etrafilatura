@@ -57,6 +57,7 @@ test = [
 ]
 bench = [
     "trafilatura>=2.3",
+    "pytest-benchmark>=5.1",
 ]
 build = [
     "maturin>=1.10",
@@ -134,7 +135,7 @@ error-on-warning = true
 [tool.pytest]
 minversion = "9.0"
 testpaths = ["tests"]
-addopts = ["--import-mode=importlib", "-ra", "-m", "not stress and not integration"]
+addopts = ["--import-mode=importlib", "-ra", "-m", "not stress and not integration and not bench"]
 pythonpath = ["."]
 strict = true
 filterwarnings = ["error"]
@@ -143,6 +144,7 @@ markers = [
     "slow: slow tests (deselect with -m 'not slow')",
     "stress: concurrency and volume stress (run via make stress)",
     "integration: live network calls (run via make integration)",
+    "bench: etrafilatura vs trafilatura benchmarks (run via make benchmark)",
 ]
 
 [tool.coverage.run]
