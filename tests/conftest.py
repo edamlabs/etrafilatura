@@ -16,7 +16,7 @@ from etrafilatura.settings import use_config
 RESOURCES: Final = Path(__file__).parent / "resources"
 HTML_DIR: Final = RESOURCES / "html"
 
-ARTICLE: Final = (HTML_DIR / "article.html").read_text()
+ARTICLE: Final = (HTML_DIR / "article.html").read_text(encoding="utf-8")
 
 
 ##### PAGES #####
@@ -33,7 +33,7 @@ def page_of() -> object:
     """Reader returning the source of an HTML fixture by filename."""
 
     def _read(name: str) -> str:
-        return (HTML_DIR / name).read_text()
+        return (HTML_DIR / name).read_text(encoding="utf-8")
 
     return _read
 
