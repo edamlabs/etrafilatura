@@ -3,6 +3,8 @@
 from typing import Any
 from urllib.parse import urlparse
 
+from lxml.etree import tostring
+
 from etrafilatura import _native
 from etrafilatura.settings import Document
 from etrafilatura.utils import HtmlInput, load_html
@@ -15,10 +17,10 @@ def extract_metadata(
     extensive: bool = True,
     author_blacklist: set[str] | None = None,
 ) -> Document:
-    """Extract metadata from an HTML string or any accepted input, as a `Document`.
+    """Extract metadata from an HTML string, tree or any accepted input, as a `Document`.
 
     Args:
-        filecontent: HTML code as string, bytes, path or Response.
+        filecontent: HTML code as string, bytes, lxml tree or Response.
         default_url: Previously known URL of the downloaded document.
         date_config: Extraction parameters; `extensive_search` picks the date mode.
         extensive: Use extensive search for date extraction.
@@ -27,9 +29,10 @@ def extract_metadata(
     Returns:
         A Document containing the extracted metadata; empty when there is nothing to parse.
     """
-    html = load_html(filecontent)
-    if html is None:
+    tree = load_html(filecontent)
+    if tree is None:
         return Document()
+    html = tostring(tree, encoding="unicode", method="html")
     params = dict(date_config) if date_config else {}
     date_mode = "extensive" if params.get("extensive_search", extensive) else "fast"
     meta = _native.extract_metadata_html(

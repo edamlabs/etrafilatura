@@ -27,10 +27,6 @@ class ExtractionResult:
     comments_text: str
     content_html: str
     comments_html: str
-    markdown: str
-    comments_markdown: str
-    readable_document: str
-    markdown_document: str
     metadata: MetadataResult
 
 def extract_html(
@@ -64,7 +60,5 @@ def extract_metadata_html(
     excluded_authors: list[str] = ...,
     date_mode: DateMode = "default",
 ) -> MetadataResult: ...
-def html_to_text(html: str) -> str: ...
-def html_to_markdown(html: str) -> str: ...
 
 ENGINE_VERSION: str

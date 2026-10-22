@@ -4,14 +4,19 @@ import logging
 from configparser import ConfigParser
 
 import pytest
+from lxml.etree import Element
+from lxml.html import fromstring
 
 from etrafilatura.deduplication import LRUCache
 from etrafilatura.settings import (
+    BASIC_CLEAN_XPATH,
     DEFAULT_CONFIG,
+    INLINE_CARRIED,
+    INLINE_CONSUMING,
+    INLINE_FORMATTABLE,
     SUPPORTED_FORMATS,
     Document,
     Extractor,
-    _yaml_scalar,
     set_date_params,
     use_config,
 )
@@ -78,10 +83,12 @@ def test_extractor_focus(caplog: pytest.LogCaptureFixture) -> None:
 def test_extractor_invalid_format() -> None:
     with pytest.raises(AttributeError, match="Cannot set format"):
         Extractor(output_format="pdf")
+    with pytest.raises(AttributeError, match="Cannot set format"):
+        Extractor(output_format="yaml")
 
 
 def test_extractor_format_universe() -> None:
-    assert {"csv", "html", "json", "markdown", "python", "txt", "xml", "xmltei", "yaml"} == SUPPORTED_FORMATS
+    assert {"csv", "html", "json", "markdown", "python", "txt", "xml", "xmltei"} == SUPPORTED_FORMATS
 
 
 def test_extractor_warnings(caplog: pytest.LogCaptureFixture) -> None:
@@ -123,11 +130,17 @@ def test_extractor_dedup_instance() -> None:
 
 def test_document_defaults_and_as_dict() -> None:
     document = Document()
-    assert document.body == ""
-    assert document.commentsbody == ""
+    assert document.body.tag == "body"
+    assert document.commentsbody.tag == "body"
     data = document.as_dict()
     assert data["title"] is None
     assert set(data) == set(Document.__slots__)
+
+
+def test_document_explicit_trees() -> None:
+    body = Element("body")
+    document = Document(body=body, commentsbody=body)
+    assert document.body is body
 
 
 def test_document_from_dict_roundtrip() -> None:
@@ -154,26 +167,20 @@ def test_document_clean_and_trim_to_none() -> None:
 ##### helpers #####
 
 
-@pytest.mark.parametrize(
-    ("value", "expected"),
-    [
-        ("plain title", "plain title"),
-        ("title: with colon", '"title: with colon"'),
-        ("yes", '"yes"'),
-        ("trailing:", '"trailing:"'),
-        (" hash #tag", '" hash #tag"'),
-        ('say "hi"', 'say "hi"'),
-        ("back\\slash", "back\\slash"),
-        ("tab\there", '"tab\\there"'),
-        ("lead\u00e9", "lead\u00e9"),
-    ],
-)
-def test_yaml_scalar(value: str, expected: str) -> None:
-    assert _yaml_scalar(value) == expected
-
-
 def test_set_date_params() -> None:
     params = set_date_params(False)
     assert params["original_date"] is True
     assert params["extensive_search"] is False
     assert "max_date" in params
+
+
+def test_inline_ladder() -> None:
+    assert {"hi", "ref", "del"} == INLINE_CONSUMING
+    assert INLINE_CONSUMING | {"code"} == INLINE_FORMATTABLE
+    assert INLINE_FORMATTABLE | {"graphic"} == INLINE_CARRIED
+
+
+def test_basic_clean_xpath() -> None:
+    tree = fromstring('<html><body><aside>x</aside><footer class="cookie-banner">c</footer><p>keep</p></body></html>')
+    matches = BASIC_CLEAN_XPATH(tree)
+    assert {element.tag for element in matches} == {"aside", "footer"}

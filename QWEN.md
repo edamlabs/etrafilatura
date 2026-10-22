@@ -8,12 +8,12 @@ the workflow commits. Anything you change outside the allowlist below is discard
 
 | Path | Holds |
 |---|---|
-| `crates/native/src/lib.rs` | The engine bridge: `#[pyfunction]`s (`extract_html`, `extract_metadata_html`, `html_to_text`, `html_to_markdown`), result classes, `to_py_err` (raises into `etrafilatura.errors`) |
+| `crates/native/src/lib.rs` | The engine bridge: `#[pyfunction]`s (`extract_html`, `extract_metadata_html`), result classes, `to_py_err` (raises into `etrafilatura.errors`) |
 | `src/etrafilatura/_native.pyi` | Stubs of the private native module |
 | `src/etrafilatura/core.py` | The public verbs `extract`, `bare_extraction`, `extract_with_metadata`, `determine_returnstring`; new engine options become keyword arguments here |
 | `src/etrafilatura/settings.py` | `Extractor` (option bundle), `Document`, `use_config`, `settings.cfg` keys |
-| `src/etrafilatura/xml.py` | Output renderers: XML, TEI, JSON, CSV, HTML, text/Markdown |
-| `src/etrafilatura/metadata.py`, `baseline.py`, `downloads.py`, `utils.py`, `deduplication.py`, `cli.py` | The rest of the trafilatura-compatible surface |
+| `src/etrafilatura/xml.py`, `baseline.py`, `htmlprocessing.py`, `deduplication.py` | **Vendored verbatim from Python trafilatura (Apache-2.0, NOTICE.md)**: renderers, baseline, Simhash. Do not rewrite; re-sync wholesale from a new trafilatura release when asked |
+| `src/etrafilatura/metadata.py`, `downloads.py`, `utils.py`, `cli.py` | The rest of the trafilatura-compatible surface |
 | `src/etrafilatura/__init__.py` | Re-exports only; add new public names to `__all__` |
 | `tests/unit/etrafilatura/` | Mirror of `src/etrafilatura/`; public behaviour in `test_core_*.py` |
 | `tests/resources/html/` | Page fixtures; also the fidelity corpus |
@@ -29,8 +29,9 @@ Never touch `.github/`, `Cargo.toml`, `Cargo.lock`, `pyproject.toml`, `uv.lock`,
 
 ## Rules
 
-1. Keep the Python API compatible with **trafilatura**: the binding is a drop-in. If upstream forces a break, do
-   not make it: describe it under "Needs a human decision".
+1. Keep the Python API compatible with **trafilatura**: the binding is a drop-in — same signatures, same lxml
+   return types, same output bytes. If upstream forces a break, do not make it: describe it under
+   "Needs a human decision".
 2. Every new public item exposed from Rust needs, in the same change:
    - the wrapper in `lib.rs` with a `///` doc comment (it becomes the Python docstring) and its registration in `_native`;
    - the typed entry in `_native.pyi` and, when public, its wrapper in the matching compat module plus `__all__`;

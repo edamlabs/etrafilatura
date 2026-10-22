@@ -9,7 +9,7 @@ description = "Python binding of trafilatura-rs: web page main text, comments an
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"
-license-files = ["LICENSE", "THIRD_PARTY_LICENSES.md"]
+license-files = ["LICENSE", "THIRD_PARTY_LICENSES.md", "NOTICE.md"]
 authors = [{ name = "EDamLabs" }]
 keywords = ["trafilatura", "extraction", "html", "scraping", "content", "boilerplate", "metadata", "rust", "trafilatura-rs"]
 classifiers = [
@@ -24,6 +24,7 @@ classifiers = [
     "Typing :: Typed",
 ]
 dependencies = [
+    "lxml>=6.1",
     "urllib3>=2.5",
     "charset-normalizer>=3.4",
 ]
@@ -45,6 +46,7 @@ lint = [
     "tach>=0.30",
     "validate-pyproject[all]>=0.26",
     "zizmor>=1.25",
+    "types-lxml>=2026.2",
 ]
 test = [
     "pytest>=9.1",
@@ -86,7 +88,8 @@ features = ["pyo3/extension-module"]
 line-length = 120
 target-version = "py312"
 src = ["src", "tests"]
-exclude = ["tests/resources"]
+# tests/resources: fixtures; the four vendored trafilatura modules are frozen upstream code (NOTICE.md).
+exclude = ["tests/resources", "src/etrafilatura/baseline.py", "src/etrafilatura/deduplication.py", "src/etrafilatura/htmlprocessing.py", "src/etrafilatura/xml.py"]
 
 [tool.ruff.lint]
 select = [
@@ -100,12 +103,13 @@ ignore = ["E501", "ISC001", "PLR0913"]
 "tests/**" = ["S101", "PLR2004", "ARG", "FBT", "S318", "EM101", "EM102"]
 "tools/*.py" = ["S310", "PLR2004"]
 # The public surface mirrors trafilatura's positional-bool signatures verbatim: drop-in beats house style there.
-"src/etrafilatura/core.py" = ["FBT001", "FBT002", "FBT003", "PLR0917"]
+"src/etrafilatura/core.py" = ["FBT001", "FBT002", "FBT003", "PLR0917", "PLR0912"]
 "src/etrafilatura/baseline.py" = ["FBT001", "FBT002"]
 "src/etrafilatura/downloads.py" = ["FBT001", "FBT002"]
 "src/etrafilatura/metadata.py" = ["FBT001", "FBT002"]
 "src/etrafilatura/settings.py" = ["FBT001", "FBT002"]
-"src/etrafilatura/utils.py" = ["FBT001", "FBT002"]
+# utils.py carries verbatim trafilatura helpers (NOTICE.md): their shape is the contract.
+"src/etrafilatura/utils.py" = ["FBT001", "FBT002", "FBT003", "EM101", "PLR2004", "SIM102"]
 "src/etrafilatura/xml.py" = ["FBT001", "FBT002", "S318"]
 
 [tool.ruff.lint.isort]
@@ -122,7 +126,7 @@ python-version = "3.12"
 
 [tool.ty.src]
 include = ["src", "tests", "tools"]
-exclude = ["tests/resources"]
+exclude = ["tests/resources", "src/etrafilatura/baseline.py", "src/etrafilatura/deduplication.py", "src/etrafilatura/htmlprocessing.py", "src/etrafilatura/xml.py"]
 
 [tool.ty.terminal]
 error-on-warning = true
@@ -145,6 +149,13 @@ markers = [
 source_pkgs = ["etrafilatura"]
 branch = true
 parallel = true
+# vendored verbatim from trafilatura (Apache-2.0, NOTICE.md): exercised through the suite, tested upstream
+omit = [
+    "src/etrafilatura/xml.py",
+    "src/etrafilatura/baseline.py",
+    "src/etrafilatura/htmlprocessing.py",
+    "src/etrafilatura/deduplication.py",
+]
 
 [tool.coverage.report]
 fail_under = 100

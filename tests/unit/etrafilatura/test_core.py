@@ -5,8 +5,10 @@ import logging
 from xml.dom.minidom import parseString
 
 import pytest
+from lxml.etree import _Element
+from lxml.html import fromstring
 
-from etrafilatura.core import bare_extraction, determine_returnstring, extract, extract_with_metadata
+from etrafilatura.core import _yaml_scalar, bare_extraction, determine_returnstring, extract, extract_with_metadata
 from etrafilatura.deduplication import LRUCache
 from etrafilatura.settings import DEFAULT_CONFIG, Document, Extractor, use_config
 
@@ -46,11 +48,11 @@ def test_core_extract_formats(article: str) -> None:
 
     page = extract(article, output_format="html", with_metadata=True)
     assert page is not None
-    assert page.startswith("<!DOCTYPE html>")
+    assert page.startswith("<html>")
 
-    yaml_output = extract(article, output_format="yaml", with_metadata=True)
-    assert yaml_output is not None
-    assert yaml_output.startswith("---\ntitle: The Quiet Revolution of Small Tools")
+    headered = extract(article, output_format="txt", with_metadata=True)
+    assert headered is not None
+    assert headered.startswith("---\ntitle: The Quiet Revolution of Small Tools")
 
 
 def test_core_extract_comments(comments_page: str) -> None:
@@ -108,8 +110,10 @@ def test_core_extract_author_blacklist(metadata_page: str) -> None:
 def test_core_extract_deduplicate(article: str) -> None:
     assert extract(article, deduplicate=True) is not None
     assert extract(article, deduplicate=True) is not None
+    assert extract(article, deduplicate=True) is not None
     assert extract(article, deduplicate=True) is None
     cache = LRUCache(maxsize=8)
+    assert extract(article, deduplicate=cache) is not None
     assert extract(article, deduplicate=cache) is not None
     assert extract(article, deduplicate=cache) is not None
     assert extract(article, deduplicate=cache) is None
@@ -125,13 +129,17 @@ def test_core_extract_max_tree_size_rejected(article: str) -> None:
         extract(article, max_tree_size=1000)
 
 
+def test_core_extract_max_tree_size_config(article: str, make_config) -> None:  # type: ignore[no-untyped-def]
+    config = make_config(MAX_TREE_SIZE="1")  # type: ignore[operator]
+    assert extract(article, config=config) is None  # type: ignore[arg-type]
+
+
 ##### extract: configuration #####
 
 
 def test_core_extract_prune(article: str) -> None:
-    assert extract(article, prune_xpath="nav, footer") is not None
-    assert extract(article, prune_xpath=["nav"]) is not None
-    assert extract(article, prune_xpath=[]) is not None
+    assert extract(article, prune_xpath=".//aside") is not None
+    assert extract(article, prune_xpath=[".//aside", ".//footer"]) is not None
 
 
 def test_core_extract_settingsfile(article: str, tmp_path) -> None:  # type: ignore[no-untyped-def]
@@ -156,7 +164,7 @@ def test_core_extract_date_params(metadata_page: str) -> None:
 
 
 def test_core_extract_language_metadata(article: str) -> None:
-    document = extract_with_metadata(article)
+    document = extract_with_metadata(article, target_language="en")
     assert document is not None
     assert document.language == "en"
 
@@ -168,15 +176,15 @@ def test_core_bare_extraction(article: str) -> None:
     document = bare_extraction(article)
     assert isinstance(document, Document)
     assert document.text is not None
-    assert "<p>" in document.body
+    assert isinstance(document.body, _Element)
+    assert document.body.tag == "body"
     assert document.raw_text
-    assert document.commentsbody == ""
 
 
 def test_core_bare_extraction_comments(comments_page: str) -> None:
     document = bare_extraction(comments_page)
     assert isinstance(document, Document)
-    assert "comment" in document.commentsbody
+    assert "Benchmarked" in "".join(document.commentsbody.itertext())
     assert document.comments
 
 
@@ -203,7 +211,8 @@ def test_core_bare_extraction_formatting(article: str) -> None:
 def test_core_bare_extraction_no_comments(article: str) -> None:
     document = bare_extraction(article, include_comments=False)
     assert isinstance(document, Document)
-    assert document.commentsbody == ""
+    assert document.commentsbody.tag == "body"
+    assert len(document.commentsbody) == 0
 
 
 def test_core_bare_extraction_rejects(article: str) -> None:
@@ -220,6 +229,12 @@ def test_core_bare_extraction_options_object(article: str) -> None:
     options = Extractor(output_format="python")
     document = bare_extraction(article, options=options)
     assert isinstance(document, Document)
+
+
+def test_core_bare_extraction_tree_input(article: str) -> None:
+    document = bare_extraction(fromstring(article))
+    assert isinstance(document, Document)
+    assert document.text
 
 
 ##### extract_with_metadata #####
@@ -239,18 +254,23 @@ def test_core_extract_with_metadata_none() -> None:
     assert extract_with_metadata("") is None
 
 
-def test_core_fingerprint_txt_formats(article: str) -> None:
-    text = extract(article)
-    assert text is not None
-
-
 ##### determine_returnstring #####
+
+
+def test_core_determine_returnstring_drops_empty_elements(article: str) -> None:
+    from lxml.html import fromstring as html_fromstring  # noqa: PLC0415
+
+    document = bare_extraction(article)
+    assert isinstance(document, Document)
+    document.body.append(html_fromstring("<hi></hi>"))
+    rendered = determine_returnstring(document, Extractor(output_format="xml"))
+    assert "<hi" not in rendered
 
 
 def test_core_determine_returnstring(article: str) -> None:
     document = bare_extraction(article, with_metadata=True)
     assert isinstance(document, Document)
-    for name in ("txt", "markdown", "yaml", "xml", "xmltei", "json", "csv", "html"):
+    for name in ("txt", "markdown", "xml", "xmltei", "json", "csv", "html"):
         options = Extractor(output_format=name, with_metadata=True)
         assert determine_returnstring(document, options)
 
@@ -259,3 +279,23 @@ def test_core_rejection_logged(article: str, caplog: pytest.LogCaptureFixture) -
     with caplog.at_level(logging.WARNING):
         assert extract(article, target_language="fr") is None
     assert "discarding data" in caplog.text
+
+
+##### _yaml_scalar (vendored) #####
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        ("plain title", "plain title"),
+        ("title: with colon", '"title: with colon"'),
+        ("yes", '"yes"'),
+        ("trailing:", '"trailing:"'),
+        (" hash #tag", '" hash #tag"'),
+        ('say "hi"', 'say "hi"'),
+        ("back\\slash", "back\\slash"),
+        ("tab\there", '"tab\\there"'),
+    ],
+)
+def test_core_yaml_scalar(value: str, expected: str) -> None:
+    assert _yaml_scalar(value) == expected

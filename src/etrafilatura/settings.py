@@ -1,39 +1,30 @@
-"""Configuration objects and the `Document` class — same interface as trafilatura.settings."""
+"""Configuration objects and the `Document` class — same interface as trafilatura.settings.
 
-import json
+The tree-processing constants (`BASIC_CLEAN_XPATH`, the inline-tag ladder) are vendored from
+trafilatura 2.3.1, Apache-2.0, Copyright 2019-present Adrien Barbaresi and contributors; see NOTICE.md.
+"""
+
 import logging
 from configparser import ConfigParser
 from datetime import datetime
 from html import unescape
 from pathlib import Path
-from typing import Any, Final
+from typing import TYPE_CHECKING, Any, Final
 
-from etrafilatura.deduplication import LRUCache
+from lxml.etree import Element, XPath, _Element
+
 from etrafilatura.utils import line_processing
+
+if TYPE_CHECKING:
+    from etrafilatura.deduplication import LRUCache
 
 LOGGER = logging.getLogger(__name__)
 
-SUPPORTED_FMT_CLI: Final = ("csv", "html", "json", "markdown", "txt", "xml", "xmltei", "yaml")
+SUPPORTED_FMT_CLI: Final = ("csv", "json", "html", "markdown", "txt", "xml", "xmltei")
 SUPPORTED_FORMATS: Final = frozenset(SUPPORTED_FMT_CLI) | {"python"}
 
-# Metadata is emitted as a YAML-style header; values such as a title containing ": "
-# otherwise produce invalid YAML or get reinterpreted as a non-string.
-YAML_FIELDS: Final = [
-    "title",
-    "author",
-    "url",
-    "hostname",
-    "description",
-    "sitename",
-    "date",
-    "categories",
-    "tags",
-    "fingerprint",
-    "id",
-    "license",
-]
 MAX_METADATA_LENGTH: Final = 10000
-YAML_RESERVED: Final = frozenset({"true", "false", "yes", "no", "on", "off", "y", "n", "null", "none", "~"})
+LRU_SIZE: Final = 4096
 
 
 def use_config(filename: str | None = None, config: ConfigParser | None = None) -> ConfigParser:
@@ -71,21 +62,33 @@ def set_date_params(extensive: bool = True) -> dict[str, Any]:
     }
 
 
-def _yaml_scalar(value: str) -> str:
-    """Render a metadata string as a plain or double-quoted YAML-safe scalar."""
-    if (
-        value
-        and value == value.strip()
-        and value[0].isalpha()
-        and ": " not in value
-        and " #" not in value
-        and not value.endswith(":")
-        and value.lower() not in YAML_RESERVED
-        and all(ch >= " " and ch != "\x7f" for ch in value)
-    ):
-        return value
-    # a JSON string is always a valid, exactly round-tripping YAML double-quoted scalar
-    return json.dumps(value)
+##### TREE CONSTANTS (vendored) #####
+
+# prune cookie/consent banners: fluent prose justext's density metric can't classify; class/id is
+# English even on localized templates.
+_COOKIE_CONSENT_RE = (
+    "cookie[-_]?(?:banner|bar|consent|law|notice|policy|description)|notice[-_]{0,2}cookie"
+    "|consent[-_]?(?:banner|manager|sdk)|borlabs|cookiebot|cmplz|onetrust|moove[-_]?gdpr"
+)
+BASIC_CLEAN_XPATH = XPath(
+    ".//aside|.//div[contains(@class|@id, 'footer')]|.//fencedframe|.//footer|.//script|.//style|.//svg|.//template"
+    f"|.//*[re:test(@class, '{_COOKIE_CONSENT_RE}', 'i') or re:test(@id, '{_COOKIE_CONSENT_RE}', 'i')]",
+    namespaces={"re": "http://exslt.org/regular-expressions"},
+)
+
+# min length for a repeated span to count as an extraction artifact (not coincidental content).
+MIN_DUPLICATE_LENGTH = 50
+
+# the substring-dedup scans are O(n^2) in accumulated text; skip beyond this size.
+DEDUPE_SCAN_CAP = 200_000
+
+# inline-tag ladder (single source of truth shared by extractor and serializer):
+INLINE_CONSUMING = {"hi", "ref", "del"}  # element folds its children into its own text
+INLINE_FORMATTABLE = INLINE_CONSUMING | {"code"}  # + code: has text, rendered verbatim
+INLINE_CARRIED = INLINE_FORMATTABLE | {"graphic"}  # + graphic: no text, rendered as image markup
+
+
+##### EXTRACTOR #####
 
 
 class Extractor:
@@ -134,7 +137,7 @@ class Extractor:
         links: bool = False,
         images: bool = False,
         tables: bool = True,
-        dedup: bool | LRUCache = False,
+        dedup: "bool | LRUCache" = False,
         lang: str | None = None,
         url: str | None = None,
         source: str | None = None,
@@ -193,11 +196,11 @@ class Extractor:
         )
 
 
-class Document:
-    """Stores all necessary data and metadata fields for extracted information.
+##### DOCUMENT #####
 
-    Difference with trafilatura: `body` and `commentsbody` hold cleaned HTML strings, not lxml trees.
-    """
+
+class Document:
+    "Defines a class to store all necessary data and metadata fields for extracted information."
 
     __slots__ = [
         "author",
@@ -238,9 +241,9 @@ class Document:
         fingerprint: str | None = None,
         idval: str | None = None,
         license_val: str | None = None,
-        body: str | None = None,
+        body: _Element | None = None,
         comments: str | None = None,
-        commentsbody: str | None = None,
+        commentsbody: _Element | None = None,
         raw_text: str | None = None,
         text: str | None = None,
         language: str | None = None,
@@ -260,9 +263,9 @@ class Document:
         self.fingerprint: str | None = fingerprint
         self.id: str | None = idval
         self.license: str | None = license_val
-        self.body: str = body if body is not None else ""
+        self.body: _Element = body if body is not None else Element("body")
         self.comments: str | None = comments
-        self.commentsbody: str = commentsbody if commentsbody is not None else ""
+        self.commentsbody: _Element = commentsbody if commentsbody is not None else Element("body")
         self.raw_text: str | None = raw_text
         self.text: str | None = text
         self.language: str | None = language
@@ -272,14 +275,14 @@ class Document:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "Document":
-        """Set a series of attributes using a dictionary."""
+        "Set a series of attributes using a dictionary."
         doc = cls()
         for key, value in data.items():
             setattr(doc, key, value)
         return doc
 
     def clean_and_trim(self) -> None:
-        """Limit text length and trim the attributes."""
+        "Limit text length and trim the attributes."
         for slot in self.__slots__:
             value = getattr(self, slot)
             if isinstance(value, str):
@@ -288,5 +291,6 @@ class Document:
                 setattr(self, slot, value)
 
     def as_dict(self) -> dict[str, Any]:
-        """Convert the document to a dictionary."""
+        "Convert the document to a dictionary."
+        # heterogeneous value types (str, list, lxml _Element, None)
         return {attr: getattr(self, attr, None) for attr in self.__slots__}

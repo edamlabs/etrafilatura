@@ -1,6 +1,7 @@
 #  tach · architectural import contracts (Rust-backed) · CI: `tach check` (make arch)
-#  Layers mirror trafilatura's own module graph: settings/utils/deduplication (contracts)
-#  ← downloads/baseline/metadata/xml (engines) ← core/cli (use cases) ← etrafilatura (public surface).
+#  Layers mirror trafilatura's own module graph: settings/utils/errors (contracts)
+#  ← deduplication/xml/htmlprocessing (renderers) ← downloads/baseline/metadata (engines)
+#  ← core/cli (use cases) ← etrafilatura (public surface).
 
 source_roots = ["src"]
 
@@ -39,33 +40,36 @@ path = "etrafilatura.utils"
 depends_on = []
 
 [[modules]]
-path = "etrafilatura.deduplication"
-depends_on = []
+path = "etrafilatura.settings"
+depends_on = ["etrafilatura.utils"]
 
 [[modules]]
-path = "etrafilatura.settings"
-depends_on = ["etrafilatura.deduplication", "etrafilatura.utils"]
+path = "etrafilatura.deduplication"
+depends_on = ["etrafilatura.settings", "etrafilatura.utils"]
+
+[[modules]]
+path = "etrafilatura.xml"
+depends_on = ["etrafilatura.settings", "etrafilatura.utils"]
+
+[[modules]]
+path = "etrafilatura.htmlprocessing"
+depends_on = ["etrafilatura.xml"]
+
+[[modules]]
+path = "etrafilatura.baseline"
+depends_on = [
+    "etrafilatura.settings",
+    "etrafilatura.utils",
+    "etrafilatura.xml",
+]
 
 [[modules]]
 path = "etrafilatura.metadata"
 depends_on = ["etrafilatura._native", "etrafilatura.settings", "etrafilatura.utils"]
 
 [[modules]]
-path = "etrafilatura.baseline"
-depends_on = [
-    "etrafilatura._native",
-    "etrafilatura.errors",
-    "etrafilatura.settings",
-    "etrafilatura.utils",
-]
-
-[[modules]]
 path = "etrafilatura.downloads"
 depends_on = ["etrafilatura.settings", "etrafilatura.utils"]
-
-[[modules]]
-path = "etrafilatura.xml"
-depends_on = ["etrafilatura._native", "etrafilatura.settings"]
 
 [[modules]]
 path = "etrafilatura.core"
@@ -73,6 +77,7 @@ depends_on = [
     "etrafilatura._native",
     "etrafilatura.deduplication",
     "etrafilatura.errors",
+    "etrafilatura.htmlprocessing",
     "etrafilatura.metadata",
     "etrafilatura.settings",
     "etrafilatura.utils",

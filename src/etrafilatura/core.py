@@ -1,28 +1,109 @@
-"""Extraction entry points — same interface as trafilatura.core."""
+"""Extraction entry points — same interface as trafilatura.core.
+
+`determine_returnstring`, `_check_deprecation` and `_yaml_scalar` are vendored from trafilatura 2.3.1
+(https://github.com/adbar/trafilatura), Apache-2.0, Copyright 2019-present Adrien Barbaresi and
+contributors; see NOTICE.md. The extraction pipeline itself runs in the Rust engine.
+"""
 
 import logging
 import warnings
-from types import MappingProxyType
-from typing import Any, Final
+from copy import copy
+from json import dumps as json_dumps
+from typing import TYPE_CHECKING, Any, Final
+
+from lxml.etree import XPath, tostring
+from lxml.html import fragment_fromstring
 
 from etrafilatura import _native
 from etrafilatura.deduplication import LRUCache, content_fingerprint, duplicate_test
 from etrafilatura.errors import ExtractionError
+from etrafilatura.htmlprocessing import build_html_output, prune_unwanted_nodes
 from etrafilatura.metadata import extract_metadata
-from etrafilatura.settings import (
-    DEFAULT_CONFIG,
-    YAML_FIELDS,
-    Document,
-    Extractor,
-    _yaml_scalar,
-    use_config,
-)
+from etrafilatura.settings import DEFAULT_CONFIG, Document, Extractor, use_config
 from etrafilatura.utils import HtmlInput, load_html, normalize_unicode
-from etrafilatura.xml import build_html_output, build_json_output, control_xml_output, render_text, xmltocsv
+from etrafilatura.xml import build_json_output, control_xml_output, delete_element, keeps_empty, xmltocsv, xmltotxt
+
+if TYPE_CHECKING:
+    from lxml.etree import _Element
+    from lxml.html import HtmlElement
 
 LOGGER = logging.getLogger(__package__)
 
-TXT_FORMATS: Final = frozenset({"markdown", "txt"})
+# recall escalation constants live in the engine; the output contract is trafilatura's.
+TXT_FORMATS: Final = {"markdown", "txt"}
+_YAML_FIELDS = [
+    "title",
+    "author",
+    "url",
+    "hostname",
+    "description",
+    "sitename",
+    "date",
+    "categories",
+    "tags",
+    "fingerprint",
+    "id",
+    "license",
+]
+
+# Metadata is emitted as a YAML-style Markdown header; values such as a title
+# containing ": " (or a leading indicator, or a reserved word) otherwise produce
+# invalid YAML or get reinterpreted as a non-string. See GH #814.
+_YAML_RESERVED = frozenset({"true", "false", "yes", "no", "on", "off", "y", "n", "null", "none", "~"})
+
+
+def _yaml_scalar(value: str) -> str:
+    "Render a metadata string as a plain or double-quoted YAML-safe scalar."
+    if (
+        value
+        and value == value.strip()
+        and value[0].isalpha()
+        and ": " not in value
+        and " #" not in value
+        and not value.endswith(":")
+        and value.lower() not in _YAML_RESERVED
+        and all(ch >= " " and ch != "\x7f" for ch in value)
+    ):
+        return value
+    # a JSON string is always a valid, exactly round-tripping YAML double-quoted scalar
+    return json_dumps(value)
+
+
+def determine_returnstring(document: Document, options: Extractor) -> str:
+    """Convert XML tree to chosen format, clean the result and output it as a string"""
+    # XML (TEI) steps
+    if "xml" in options.format:
+        # last cleaning
+        for element in document.body.iter("*"):
+            if len(element) == 0 and not element.text and not element.tail and not keeps_empty(element):
+                delete_element(element, keep_tail=False)
+        # build output tree
+        returnstring = control_xml_output(document, options)
+    # CSV
+    elif options.format == "csv":
+        returnstring = xmltocsv(document, options.formatting)
+    # JSON
+    elif options.format == "json":
+        returnstring = build_json_output(document, options.with_metadata)
+    # HTML
+    elif options.format == "html":
+        returnstring = build_html_output(document, options.with_metadata)
+    # Markdown and TXT
+    else:
+        header = ""
+        if options.with_metadata:
+            # categories/tags are lists, their repr is a valid flow sequence
+            fields = "".join(
+                f"{attr}: {_yaml_scalar(value) if isinstance(value, str) else value}\n"
+                for attr in _YAML_FIELDS
+                if (value := getattr(document, attr))
+            )
+            header = f"---\n{fields}---\n"
+        returnstring = f"{header}{xmltotxt(document.body, options.formatting)}"
+        ### commentsbody is always a tree (Document defaults it to <body/>): the append is unconditional.
+        returnstring = f"{returnstring}\n{xmltotxt(document.commentsbody, options.formatting)}".strip()
+    # normalize Unicode format (defaults to NFC)
+    return normalize_unicode(returnstring)
 
 
 def _check_deprecation(
@@ -52,12 +133,7 @@ def _check_deprecation(
     return fast or no_fallback
 
 
-def _join_selectors(prune_xpath: str | list[str] | None) -> str | None:
-    """One CSS selector string from a single selector or a list of them."""
-    if prune_xpath is None:
-        return None
-    selectors = [prune_xpath] if isinstance(prune_xpath, str) else list(prune_xpath)
-    return ", ".join(selectors) or None
+##### ENGINE BRIDGE #####
 
 
 def _engine_options(options: Extractor) -> dict[str, Any]:
@@ -72,6 +148,7 @@ def _engine_options(options: Extractor) -> dict[str, Any]:
         "images": options.images,
         "links": options.links,
         "excluded_authors": sorted(options.author_blacklist),
+        "deduplicate": bool(options.dedup),
         "essential_metadata": options.only_with_metadata,
         "max_tree_size": options.max_tree_size,
         "date_mode": "extensive" if options.date_params.get("extensive_search") else "fast",
@@ -83,57 +160,18 @@ def _engine_options(options: Extractor) -> dict[str, Any]:
     }
 
 
-##### OUTPUT #####
-
-
-def _render_xml(document: Document, options: Extractor) -> str:
-    return control_xml_output(document, options)
-
-
-def _render_csv(document: Document, options: Extractor) -> str:
-    return xmltocsv(document, options.formatting)
-
-
-def _render_json(document: Document, options: Extractor) -> str:
-    return build_json_output(document, options.with_metadata)
-
-
-def _render_html(document: Document, options: Extractor) -> str:
-    return build_html_output(document, options.with_metadata)
-
-
-def _render_text(document: Document, options: Extractor) -> str:
-    text = render_text(document.body, options.formatting)
-    if document.commentsbody:
-        text = f"{text}\n{render_text(document.commentsbody, options.formatting)}".strip()
-    if not options.with_metadata:
-        return text
-    fields = "".join(
-        f"{attr}: {_yaml_scalar(value) if isinstance(value, str) else value}\n"
-        for attr in YAML_FIELDS
-        if (value := getattr(document, attr))
-    )
-    return f"---\n{fields}---\n{text}"
-
-
-RENDERERS: Final[MappingProxyType[str, Any]] = MappingProxyType(
-    {
-        "csv": _render_csv,
-        "html": _render_html,
-        "json": _render_json,
-        "markdown": _render_text,
-        "txt": _render_text,
-        "xml": _render_xml,
-        "xmltei": _render_xml,
-        "yaml": _render_text,
-    }
-)
-
-
-def determine_returnstring(document: Document, options: Extractor) -> str:
-    """Convert the document to the chosen output format and return it as a string."""
-    returnstring = RENDERERS[options.format](document, options)
-    return normalize_unicode(returnstring)
+def _engine_sequence(
+    tree: "HtmlElement", options: Extractor, prune_xpath: str | list[str] | None
+) -> tuple["_Element", str, "_Element", str]:
+    """One extraction through the Rust engine: pruned tree in, trafilatura-shaped trees and texts out."""
+    if prune_xpath is not None:
+        expressions = [prune_xpath] if isinstance(prune_xpath, str) else list(prune_xpath)
+        tree = prune_unwanted_nodes(tree, [XPath(expression) for expression in expressions])
+    html = tostring(tree, encoding="unicode", method="html")
+    result = _native.extract_html(html, **_engine_options(options))
+    postbody = fragment_fromstring(result.content_html, create_parent="body")
+    commentsbody = fragment_fromstring(result.comments_html, create_parent="body")
+    return postbody, result.content_text, commentsbody, result.metadata.language
 
 
 ##### EXTRACTION #####
@@ -153,7 +191,7 @@ def bare_extraction(
     include_images: bool = False,
     include_formatting: bool | None = None,
     include_links: bool = False,
-    deduplicate: bool | LRUCache = False,
+    deduplicate: "bool | LRUCache" = False,
     date_extraction_params: dict[str, Any] | None = None,
     with_metadata: bool = False,
     only_with_metadata: bool = False,
@@ -165,15 +203,43 @@ def bare_extraction(
     config: Any = DEFAULT_CONFIG,
     options: Extractor | None = None,
 ) -> Document | dict[str, Any] | None:
-    """Text extraction returning bare Python variables; same interface as trafilatura.bare_extraction.
+    """Internal function for text extraction returning bare Python variables.
 
-    Differences: `prune_xpath` takes CSS selectors (the Rust engine prunes by CSS), the returned
-    Document carries cleaned HTML strings in `.body` / `.commentsbody`, and `deduplicate` accepts
-    an `etrafilatura.deduplication.LRUCache`.
+    Args:
+        filecontent: HTML code as string, bytes, lxml tree or Response.
+        url: URL of the webpage.
+        fast: Use faster heuristics and skip backup extraction.
+        no_fallback: Deprecated, use "fast" instead.
+        favor_precision: prefer less text but correct extraction.
+        favor_recall: prefer more text even when unsure.
+        include_comments: Extract comments along with the main text.
+        output_format: Define an output format, Python being the default
+            and the interest of this internal function.
+            Other values: "csv", "html", "json", "markdown", "txt", "xml", and "xmltei".
+        target_language: Define a language to discard invalid documents (ISO 639-1 format).
+        include_tables: Take into account information within the HTML <table> element.
+        include_images: Take images into account.
+        include_formatting: Keep structural elements related to formatting
+            (kept in XML, rendered as markdown for text formats; ignored for JSON).
+        include_links: Keep links along with their targets.
+        deduplicate: Remove duplicate segments and documents.
+            Accepts an LRUCache instance as dedicated, scoped cache.
+        date_extraction_params: Provide extraction parameters for the date search as dict().
+        with_metadata: Extract metadata fields and add them to the output.
+        only_with_metadata: Only keep documents featuring all essential metadata
+            (date, title, url).
+        url_blacklist: Provide a blacklist of URLs as set() to filter out documents.
+        author_blacklist: Provide a blacklist of Author Names as set() to filter out authors.
+        as_dict: Deprecated, use the .as_dict() method instead.
+        prune_xpath: Provide an XPath expression to prune the tree before extraction.
+            can be str or list of str.
+        config: Directly provide a configparser configuration.
+        options: Directly provide a whole extractor configuration.
 
     Returns:
-        A Document (or a dict with `as_dict=True`) containing all the extracted information, or None.
+        A Document (a dict with `as_dict=True`) containing all the extracted information, or None.
     """
+    # deprecations: stacklevel=3 → user → bare_extraction → _check_deprecation
     fast = _check_deprecation(
         fast,
         no_fallback=no_fallback,
@@ -181,6 +247,8 @@ def bare_extraction(
         max_tree_size=max_tree_size,
         stacklevel=3,
     )
+
+    # regroup extraction options
     if not options or not isinstance(options, Extractor):
         options = Extractor(
             config=config,
@@ -202,50 +270,66 @@ def bare_extraction(
             url_blacklist=url_blacklist,
             date_params=date_extraction_params,
         )
+
     try:
-        html = load_html(filecontent, options.max_file_size)
-        if html is None:
-            LOGGER.error("empty HTML input: %s", options.source)
+        # load the HTML tree
+        tree = load_html(filecontent, options.max_file_size)
+        if tree is None:
+            LOGGER.error("empty HTML tree: %s", options.source)
             raise ValueError
-        document = (
-            extract_metadata(
-                html,
+        if tree is filecontent:
+            tree = copy(tree)
+
+        # extract metadata if necessary
+        if options.with_metadata:
+            document = extract_metadata(
+                tree,
                 options.url,
                 options.date_params,
                 not options.fast,
                 options.author_blacklist,
             )
-            if options.with_metadata
-            else Document()
-        )
-        if document.url in options.url_blacklist:
-            LOGGER.warning("blacklisted URL: %s", document.url)
-            raise ValueError
-        if options.only_with_metadata and not (document.date and document.title and document.url):
-            LOGGER.error("no metadata: %s", options.source)
-            raise ValueError
-        result = _native.extract_html(
-            html,
-            prune_selector=_join_selectors(prune_xpath),
-            deduplicate=bool(options.dedup),
-            **_engine_options(options),
-        )
-        if options.dedup and duplicate_test(result.content_text, options):
+
+            # cut short if extracted URL in blacklist
+            if document.url in options.url_blacklist:
+                LOGGER.warning("blacklisted URL: %s", document.url)
+                raise ValueError
+
+            # cut short if core elements are missing
+            if options.only_with_metadata and not (document.date and document.title and document.url):
+                LOGGER.error("no metadata: %s", options.source)
+                raise ValueError
+        else:
+            document = Document()
+
+        postbody, temp_text, commentsbody, language = _engine_sequence(tree, options, prune_xpath)
+
+        ### Tree size and minimum sizes are enforced by the engine (TreeTooLargeError / InsufficientContentError).
+
+        # check duplicates at body level
+        if options.dedup and duplicate_test(postbody, options) is True:
             LOGGER.debug("discarding duplicate document: %s", options.source)
             raise ValueError
+
+        # sanity check on language
+        if options.lang:
+            document.language = language or None
     except (ExtractionError, TypeError, ValueError):
         LOGGER.warning("discarding data: %s", options.source)
         return None
 
-    document.body = result.content_html
-    document.raw_text = result.content_text
-    document.language = document.language or result.metadata.language or None
-    if options.comments:
-        document.commentsbody = result.comments_html
-        document.comments = result.comments_markdown if options.formatting else result.comments_text
+    # special case: python variables
     if options.format == "python":
-        document.text = result.markdown if options.formatting else result.content_text
-    return document.as_dict() if as_dict else document
+        document.text = xmltotxt(postbody, options.formatting)
+        if options.comments:
+            document.comments = xmltotxt(commentsbody, options.formatting)
+            document.commentsbody = commentsbody
+        document.raw_text = document.text
+    else:
+        document.raw_text, document.commentsbody = temp_text, commentsbody
+    document.body = postbody
+
+    return document if not as_dict else document.as_dict()
 
 
 def _internal_extraction(
@@ -264,7 +348,7 @@ def _internal_extraction(
     include_images: bool = False,
     include_formatting: bool | None = None,
     include_links: bool = False,
-    deduplicate: bool | LRUCache = False,
+    deduplicate: "bool | LRUCache" = False,
     date_extraction_params: dict[str, Any] | None = None,
     with_metadata: bool = False,
     only_with_metadata: bool = False,
@@ -276,7 +360,8 @@ def _internal_extraction(
     config: Any = DEFAULT_CONFIG,
     options: Extractor | None = None,
 ) -> Document | None:
-    """Internal method to do the extraction."""
+    """Internal method to do the extraction"""
+    # stacklevel=4 → user → extract → _internal_extraction → _check_deprecation
     fast = _check_deprecation(
         fast,
         no_fallback=no_fallback,
@@ -284,6 +369,8 @@ def _internal_extraction(
         max_tree_size=max_tree_size,
         stacklevel=4,
     )
+
+    # regroup extraction options
     if not options or not isinstance(options, Extractor):
         options = Extractor(
             config=use_config(settingsfile) if settingsfile else config,
@@ -306,15 +393,29 @@ def _internal_extraction(
             url_blacklist=url_blacklist,
             date_params=date_extraction_params,
         )
-    document = bare_extraction(filecontent, options=options, as_dict=False, prune_xpath=prune_xpath)
-    if not document or not isinstance(document, Document):
+
+    # extraction
+    document = bare_extraction(
+        filecontent,
+        options=options,
+        as_dict=False,
+        prune_xpath=prune_xpath,
+    )
+
+    # post-processing
+    if not isinstance(document, Document):
         return None
-    if options.format == "python":
-        message = "'python' format only usable in bare_extraction() function"
-        raise ValueError(message)
+
+    # TXT formats only output the ID and fingerprint in their metadata header
     if options.format not in TXT_FORMATS or options.with_metadata:
+        if options.format == "python":
+            message = "'python' format only usable in bare_extraction() function"
+            raise ValueError(message)
+        # add record ID to metadata
         document.id = record_id
+        # calculate fingerprint (raw_text is always set by the engine sequence)
         document.fingerprint = content_fingerprint(f"{document.title} {document.raw_text}")
+
     document.text = determine_returnstring(document, options)
     return document
 
@@ -335,7 +436,7 @@ def extract(
     include_images: bool = False,
     include_formatting: bool | None = None,
     include_links: bool = False,
-    deduplicate: bool | LRUCache = False,
+    deduplicate: "bool | LRUCache" = False,
     date_extraction_params: dict[str, Any] | None = None,
     with_metadata: bool = False,
     only_with_metadata: bool = False,
@@ -347,10 +448,11 @@ def extract(
     config: Any = DEFAULT_CONFIG,
     options: Extractor | None = None,
 ) -> str | None:
-    """Main function exposed by the package: extraction and conversion to the chosen output format.
+    """Main function exposed by the package:
+       Wrapper for text extraction and conversion to chosen output format.
 
     Args:
-        filecontent: HTML code as string, bytes, path or Response.
+        filecontent: HTML code as string, bytes, lxml tree or Response.
         url: URL of the webpage.
         record_id: Add an ID to the metadata.
         fast: Use faster heuristics and skip backup extraction.
@@ -358,28 +460,33 @@ def extract(
         favor_precision: prefer less text but correct extraction.
         favor_recall: when unsure, prefer more text.
         include_comments: Extract comments along with the main text.
-        output_format: "csv", "html", "json", "markdown", "txt", "xml", "xmltei" or "yaml".
-        tei_validation: Validate the XML-TEI output with respect to well-formedness.
-        target_language: Discard documents in another language (ISO 639-1).
+        output_format: Define an output format:
+            "csv", "html", "json", "markdown", "txt", "xml", and "xmltei".
+        tei_validation: Validate the XML-TEI output with respect to the TEI standard.
+        target_language: Define a language to discard invalid documents (ISO 639-1 format).
         include_tables: Take into account information within the HTML <table> element.
         include_images: Take images into account.
-        include_formatting: Keep structural elements (Markdown for text formats).
+        include_formatting: Keep structural elements related to formatting
+            (kept in XML, rendered as markdown for text formats; ignored for JSON).
         include_links: Keep links along with their targets.
-        deduplicate: Remove duplicate segments and documents; accepts an LRUCache.
-        date_extraction_params: Date extraction parameters as dict().
+        deduplicate: Remove duplicate segments and documents.
+            Accepts an LRUCache instance as dedicated, scoped cache.
+        date_extraction_params: Provide extraction parameters for the date search as dict().
         with_metadata: Extract metadata fields and add them to the output.
-        only_with_metadata: Only keep documents featuring date, title and url.
-        url_blacklist: URLs to filter out as set().
-        author_blacklist: Author names to filter out as set().
+        only_with_metadata: Only keep documents featuring all essential metadata
+            (date, title, url).
+        url_blacklist: Provide a blacklist of URLs as set() to filter out documents.
+        author_blacklist: Provide a blacklist of Author Names as set() to filter out authors.
         settingsfile: Use a configuration file to override the standard settings.
-        prune_xpath: CSS selector(s) to prune before extraction (str or list of str).
+        prune_xpath: Provide an XPath expression to prune the tree before extraction.
+            can be str or list of str.
         config: Directly provide a configparser configuration.
         options: Directly provide a whole extractor configuration.
 
     Returns:
         A string in the desired format or None.
     """
-    ### Must stay the first statement: a signature drift raises TypeError.
+    # must stay the first statement: a signature drift raises TypeError
     document = _internal_extraction(**locals())
     return document.text if document is not None else None
 
@@ -399,7 +506,7 @@ def extract_with_metadata(
     include_images: bool = False,
     include_formatting: bool | None = None,
     include_links: bool = False,
-    deduplicate: bool | LRUCache = False,
+    deduplicate: "bool | LRUCache" = False,
     date_extraction_params: dict[str, Any] | None = None,
     url_blacklist: set[str] | None = None,
     author_blacklist: set[str] | None = None,
@@ -408,5 +515,11 @@ def extract_with_metadata(
     config: Any = DEFAULT_CONFIG,
     options: Extractor | None = None,
 ) -> Document | None:
-    """Extraction returning Document metadata with the content string in the desired format, or None."""
+    """Main function exposed by the package:
+       Wrapper for text extraction and conversion to chosen output format.
+       This method also returns document metadata.
+
+    Returns:
+        Document metadata with content string in the desired format or None.
+    """
     return _internal_extraction(**locals(), with_metadata=True)

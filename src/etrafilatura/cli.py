@@ -1,7 +1,9 @@
 """Command-line entry point: extraction from files, URLs or stdin."""
 
 import argparse
+import logging
 import sys
+from pathlib import Path
 from typing import Final
 
 from etrafilatura import ENGINE_VERSION, __version__
@@ -33,17 +35,17 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--deduplicate", action="store_true")
     parser.add_argument("--with-metadata", action="store_true")
     parser.add_argument("--only-with-metadata", action="store_true")
-    parser.add_argument("--prune", action="append", default=None, help="CSS selector to prune (repeatable)")
+    parser.add_argument("--prune", action="append", default=None, help="XPath expression to prune (repeatable)")
     parser.add_argument("--config", default=None, help="path to a settings.cfg override")
     parser.add_argument("-v", "--verbose", action="store_true")
     parser.add_argument("--version", action="version", version=f"etrafilatura {__version__} (engine {ENGINE_VERSION})")
     return parser
 
 
-def _process(source: str | None, url: str | None, args: argparse.Namespace) -> str | None:
-    config = use_config(args.config) if args.config else None
+def _process(source: bytes | str, url: str | None, args: argparse.Namespace) -> str | None:
+    config = use_config(args.config) if args.config else use_config()
     return extract(
-        source or "",
+        source,
         url=url,
         fast=args.fast,
         favor_precision=args.precision,
@@ -59,7 +61,7 @@ def _process(source: str | None, url: str | None, args: argparse.Namespace) -> s
         with_metadata=args.with_metadata,
         only_with_metadata=args.only_with_metadata,
         prune_xpath=args.prune,
-        config=config or use_config(),
+        config=config,
     )
 
 
@@ -67,15 +69,15 @@ def main(argv: list[str] | None = None) -> int:
     """Run the CLI; returns 0 when at least one document produced output."""
     args = build_parser().parse_args(argv)
     if args.verbose:
-        import logging  # noqa: PLC0415
-
         logging.basicConfig(level=logging.DEBUG)
-    sources: Final[list[tuple[str | None, str | None]]] = (
-        [(None, args.url)] if args.url else [(path, None) for path in args.inputs] or [(sys.stdin.read(), None)]
+    sources: Final[list[tuple[bytes | str, str | None]]] = (
+        [(b"", args.url)]
+        if args.url
+        else [(Path(path).read_bytes(), None) for path in args.inputs] or [(sys.stdin.read(), None)]
     )
     outputs = 0
     for source, url in sources:
-        content = fetch_url(url) if url else source
+        content: bytes | str | None = fetch_url(url) if url else source
         if content is None:
             continue
         result = _process(content, url, args)

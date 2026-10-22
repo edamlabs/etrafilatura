@@ -7,12 +7,13 @@ extracted content; they differ in serialization.
 |---|---|---|
 | `txt` *(default)* | Plain text of the main content, comments appended | With `with_metadata=True`, a YAML-style header |
 | `markdown` | Content rendered as Markdown | Formatting implied, like trafilatura |
-| `yaml` | YAML metadata header + Markdown content | Header appears with `with_metadata=True` |
-| `xml` | trafilatura-flavored `<doc>` XML: metadata attributes, `<main>`, `<comments>` | |
-| `xmltei` | Minimal TEI document | `tei_validation=True` checks well-formedness |
+| `xml` | `<doc>` XML: metadata attributes, `<main>`, `<comments>` | Byte-identical to trafilatura's |
+| `xmltei` | TEI document | `tei_validation=True` validates against trafilatura's `tei_corpus.dtd` |
 | `json` | Metadata fields + `text` + `comments` | `ensure_ascii=False` |
 | `csv` | One row: url, id, fingerprint, hostname, title, image, date, text, comments, license, pagetype | Tab-delimited |
 | `html` | Self-contained HTML document | `<meta>` head with `with_metadata=True` |
+
+Every renderer is trafilatura's own code, vendored verbatim → [Compatibility](compatibility.md).
 
 ```python
 import etrafilatura as trafilatura

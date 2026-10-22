@@ -17,13 +17,13 @@ Main function: extraction and conversion to the chosen output format.
 
 | Parameter | Type | Default | Meaning |
 |---|---|---|---|
-| `filecontent` | str \| bytes \| Path \| Response | — | The page |
+| `filecontent` | str \| bytes \| HtmlElement \| Response | — | The page |
 | `url` | str \| None | `None` | Original URL, resolves relative links |
 | `record_id` | str \| None | `None` | ID added to the metadata |
 | `fast` | bool | `False` | Skip backup (fallback) extraction |
 | `favor_precision` / `favor_recall` | bool | `False` | Extraction focus |
 | `include_comments` | bool | `True` | Extract comments separately |
-| `output_format` | str | `"txt"` | `csv`, `html`, `json`, `markdown`, `txt`, `xml`, `xmltei`, `yaml` |
+| `output_format` | str | `"txt"` | `csv`, `html`, `json`, `markdown`, `txt`, `xml`, `xmltei` |
 | `tei_validation` | bool | `False` | Validate TEI well-formedness |
 | `target_language` | str \| None | `None` | Discard other languages (ISO 639-1) |
 | `include_tables` / `include_images` / `include_links` | bool | `True` / `False` / `False` | Keep these elements |
@@ -33,7 +33,7 @@ Main function: extraction and conversion to the chosen output format.
 | `with_metadata` / `only_with_metadata` | bool | `False` | Metadata in output / require date+title+url |
 | `url_blacklist` / `author_blacklist` | set[str] \| None | `None` | Discard filtered documents/authors |
 | `settingsfile` | str \| None | `None` | `settings.cfg` override |
-| `prune_xpath` | str \| list[str] \| None | `None` | **CSS selectors** pruned before extraction |
+| `prune_xpath` | str \| list[str] \| None | `None` | XPath expression(s) pruned before extraction |
 | `config` / `options` | ConfigParser / Extractor | defaults | Direct configuration |
 
 Returns `str | None` — `None` on every rejection (wrong language, too little content, duplicate, blacklist…).
@@ -41,8 +41,8 @@ Returns `str | None` — `None` on every rejection (wrong language, too little c
 ## bare_extraction
 
 Same parameters as `extract` (minus `record_id`, `tei_validation`, `settingsfile`; plus `as_dict`), with
-`output_format="python"` by default. Returns a [`Document`](#document) — `.text`, `.body`, `.comments`,
-`.commentsbody`, `.raw_text` and the metadata fields — a `dict` with `as_dict=True`, or `None`.
+`output_format="python"` by default. Returns a [`Document`](#document) — `.text`, `.body` (lxml tree), `.comments`,
+`.commentsbody` (lxml tree), `.raw_text` and the metadata fields — a `dict` with `as_dict=True`, or `None`.
 
 ## extract_with_metadata
 
@@ -58,7 +58,7 @@ document.title, document.author, document.date, document.sitename
 
 | Parameter | Type | Default |
 |---|---|---|
-| `filecontent` | str \| bytes \| Path \| Response | — |
+| `filecontent` | str \| bytes \| HtmlElement \| Response | — |
 | `default_url` | str \| None | `None` |
 | `date_config` | dict \| None | `None` |
 | `extensive` | bool | `True` |
@@ -84,15 +84,15 @@ through the same `settings.cfg` keys as trafilatura.
 ## load_html · baseline · html2txt
 
 ```python
-html = trafilatura.load_html(b"...")        # bytes/Path/Response → normalized HTML string
-document, text, length = trafilatura.baseline(html)
+tree = trafilatura.load_html(b"...")        # bytes/str/Response → lxml HtmlElement (or None)
+tree, text, length = trafilatura.baseline(html)   # (lxml Element, str, int)
 trafilatura.html2txt(html)                  # tag stripping
 ```
 
 ## Document
 
 `etrafilatura.settings.Document`: same slots and methods as trafilatura's (`as_dict()`, `from_dict()`,
-`clean_and_trim()`). Difference: `.body` and `.commentsbody` hold cleaned HTML **strings**, not lxml trees.
+`clean_and_trim()`). `.body` and `.commentsbody` are lxml elements rooted at `<body>`, like trafilatura's.
 
 ## Extractor · use_config
 
@@ -110,5 +110,5 @@ trafilatura.extract(html, options=options)
 ## Native layer
 
 `etrafilatura.ENGINE_VERSION` is the trafilatura-rs release compiled in; `etrafilatura.__version__` is this
-package's own semver. The compiled module `etrafilatura._native` (`extract_html`, `extract_metadata_html`,
-`html_to_text`, `html_to_markdown`) is private; it is typed in `_native.pyi` and covered by the same suite.
+package's own semver. The compiled module `etrafilatura._native` (`extract_html`,
+`extract_metadata_html`) is private; it is typed in `_native.pyi` and covered by the same suite.

@@ -1,44 +1,51 @@
 # Compatibility with trafilatura
 
-`import etrafilatura as trafilatura` and most call sites keep working. This page is the honest map: what is
-identical, what is adapted, what is not here.
+`import etrafilatura as trafilatura` and your call sites keep working — same signatures, same
+return **types**, same output bytes, same configuration keys. This page is the honest map of what is
+identical and what still differs inside the engine.
 
 ## Identical
 
 | Surface | Status |
 |---|---|
-| `extract`, `bare_extraction`, `extract_with_metadata`, `extract_metadata`, `fetch_url`, `fetch_response`, `load_html`, `baseline`, `html2txt` | Same names, same parameter lists, same defaults, same `None`-on-rejection semantics |
-| `settings.use_config`, `settings.Extractor`, `settings.Document`, `settings.DEFAULT_CONFIG` | Same interface; `settings.cfg` reads trafilatura's file unchanged (same keys) |
-| Output formats `txt`, `markdown`, `yaml`, `xml`, `json`, `csv`, `html` | Same shapes; XML `<doc>` carries the same metadata attributes |
-| `deduplication.LRUCache`, `content_fingerprint` | Same interface |
-| Deprecation warnings (`no_fallback`, `as_dict`) and `max_tree_size` rejection | Same messages, same `stacklevel` semantics |
+| `extract`, `bare_extraction`, `extract_with_metadata`, `extract_metadata`, `fetch_url`, `fetch_response`, `load_html`, `baseline`, `html2txt` | Same names, parameter lists, defaults and `None`-on-rejection semantics |
+| `load_html` | Returns an **lxml `HtmlElement`** (or None), accepts tree/str/bytes/Response/HTTPResponse, raises `TypeError` on anything else — like trafilatura |
+| `Document.body` / `.commentsbody` | **lxml elements**, rooted at `<body>`; `Document()`, `as_dict()`, `from_dict()`, `clean_and_trim()` identical |
+| `prune_xpath` | Real **XPath** expressions (str or list), pruned with lxml before extraction |
+| Output formats `txt`, `markdown`, `xml`, `xmltei`, `json`, `csv`, `html` | Produced by trafilatura's own renderers, vendored verbatim: byte-identical `<doc>` XML, TEI (DTD-validated with trafilatura's `tei_corpus.dtd`), JSON, CSV, Markdown |
+| `xmltotxt`, `control_xml_output`, `build_json_output`, `xmltocsv`, `build_tei_output`, `validate_tei`, `delete_element`, `meta_items`… | The trafilatura `xml` module, vendored |
+| `baseline()` | Returns `(lxml Element, text, length)`; the vendored trafilatura implementation (JSON-LD, Discourse, article, paragraph strategies) |
+| `deduplication` | Vendored module: `Simhash`, `content_fingerprint` (same hex values as trafilatura), `LRUCache`, `duplicate_test(element, options)` |
+| `settings.use_config`, `Extractor`, `DEFAULT_CONFIG`, `settings.cfg` | Same keys, same validation, same derived flags; `SUPPORTED_FORMATS` identical |
+| Deprecation warnings (`no_fallback`, `as_dict`) and `max_tree_size` rejection | Same messages and stacklevels |
+| `fetch_response` | urllib3 pools, retries, `INSECURE_SSL_FALLBACK`, SSRF guard, `MAX_FILE_SIZE` cap |
 
-## Adapted
+## Engine-internal differences (same contract, different implementation)
 
-| Surface | Difference |
-|---|---|
-| `load_html` | Returns a normalized HTML **string**, not an lxml tree — the Rust engine parses internally. Accepts str, bytes, `Path`, `Response`. |
-| `Document.body` / `.commentsbody` | Cleaned HTML strings instead of lxml elements. `as_dict()` therefore serializes fully to JSON. |
-| `prune_xpath` | Takes **CSS selectors** (str or list, joined as a union). XPath expressions are not translated. |
-| `baseline()` | Returns `(Document, text, length)`; the extraction runs the engine's recall pipeline instead of lxml heuristics. |
-| `xmltei` | A minimal well-formed TEI document (titleStmt, sourceDesc, profileDesc, body paragraphs, comments in `<back>`); `tei_validation` checks well-formedness, not the TEI schema. |
-| Date extraction | The engine's meta + JSON-LD date search (`extensive_search` maps to its date mode); no htmldate body-text sweep. |
-| Language detection | `whatlang` in the engine instead of langdetect/pycld2/htpy; `target_language` rejection works the same. |
-| `fetch_response` | urllib3 only (no pycurl path); `with_headers` kept and ignored, as in trafilatura. |
-| Compression in `load_html` | gzip, bzip2, xz and single-member ZIP; no brotli/zstd. |
+| Area | trafilatura | etrafilatura |
+|---|---|---|
+| Extraction pipeline | Python + lxml heuristics | Rust ([trafilatura-rs](https://github.com/nchapman/trafilatura-rs), port of go-trafilatura), GIL released |
+| Date extraction | htmldate (meta, JSON-LD, body sweep) | Engine's meta + JSON-LD search (`extensive_search` maps to its date mode) |
+| Language detection | langdetect / pycld2 / py3langid | whatlang (in the engine); `target_language` rejection behaves the same |
+| Fallbacks | readability-lxml + justext rescue | Engine's libreadability + baseline fallbacks (`fast=True` disables them) |
+| Compression in inputs | gz/bz2/xz/zip/brotli/zstd | gz/bz2/xz/zip (no brotli/zstd) |
+| Downloads | urllib3 **or** pycurl | urllib3 only (`with_headers` kept and ignored, as in trafilatura) |
 
-## Not here (yet)
+Extraction results agree on the large majority of pages and can differ on edge cases — the engines
+are independent implementations. `make fidelity` measures the agreement continuously →
+[Outputs](outputs.md#fidelity).
+
+## Not here
 
 | Surface | Note |
 |---|---|
 | `trafilatura.feeds`, `trafilatura.sitemaps`, `trafilatura.spider` | Discovery and crawling are out of scope for the binding |
 | `trafilatura.cli` parity | The `etrafilatura` command covers extraction from files, URLs and stdin — not feed/crawl modes |
-| `htmldate`-level date heuristics | See "Date extraction" above |
-| `external.py` (justext/readability rescue knobs) | The engine runs its own readability + baseline fallbacks internally (`fast` disables them) |
+| `output_format="yaml"` | Not a trafilatura 2.3 format either: rejected with the same `AttributeError` |
 
-## Engines
+## Vendored code
 
-trafilatura (Python) and trafilatura-rs are independent implementations of the same pipeline — trafilatura-rs
-ports [go-trafilatura](https://github.com/markusmobius/go-trafilatura), which ports trafilatura's algorithms.
-Extraction results agree on the large majority of pages and differ on edge cases; `make fidelity` measures the
-agreement continuously → [Outputs](outputs.md#fidelity).
+The renderers, the deduplication module, `baseline`/`html2txt` and the tree helpers are copied from
+trafilatura 2.3.1 (Apache-2.0) — see [`NOTICE.md`](https://github.com/edamlabs/etrafilatura/blob/main/NOTICE.md).
+They are re-synced from upstream releases; that is what makes the output formats identical rather
+than equivalent.

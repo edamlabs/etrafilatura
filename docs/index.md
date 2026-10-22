@@ -15,9 +15,9 @@ downloaded = trafilatura.fetch_url("https://example.org/article")
 text = trafilatura.extract(downloaded, output_format="markdown", with_metadata=True)
 ```
 
-Same verbs, same keyword arguments, same `Document`, same `settings.cfg` as
-[trafilatura](https://trafilatura.readthedocs.io/) — on a compiled engine, with two small pure dependencies
-instead of lxml, htmldate, courlan and friends.
+Same verbs, same keyword arguments, same `Document` and lxml trees, same output bytes, same
+`settings.cfg` as [trafilatura](https://trafilatura.readthedocs.io/) — on a compiled engine, with three
+dependencies (lxml, urllib3, charset-normalizer) instead of seven.
 
 | Call | Does |
 |---|---|
@@ -38,8 +38,8 @@ The extraction pipeline is Rust: html5ever parsing, scoring and fallbacks run co
 </div>
 <div markdown>
 ### Light
-`urllib3` and `charset-normalizer` are the only Python dependencies. No lxml, no native C toolchain at install
-time — abi3 wheels for Linux, macOS and Windows.
+`lxml`, `urllib3` and `charset-normalizer` are the only Python dependencies — no htmldate, courlan, justext or
+certifi, and no native toolchain at install time: abi3 wheels for Linux, macOS and Windows.
 </div>
 <div markdown>
 ### Compatible

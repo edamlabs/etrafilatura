@@ -14,5 +14,4 @@ crate-type = ["cdylib"]
 [dependencies]
 pyo3 = { workspace = true }
 trafilatura = { workspace = true }
-html2markdown = "0.3"
 url = "2"

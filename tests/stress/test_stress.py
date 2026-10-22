@@ -50,7 +50,7 @@ def test_stress_volume() -> None:
 
 def test_stress_mixed_formats(article: str) -> None:
     """Every output format under contention."""
-    formats = ("txt", "markdown", "xml", "json", "csv", "html", "yaml", "xmltei")
+    formats = ("txt", "markdown", "xml", "json", "csv", "html", "xmltei")
     with ThreadPoolExecutor(max_workers=8) as pool:
         outputs = list(
             pool.map(lambda name: extract(article, output_format=name, with_metadata=True), formats, timeout=120)

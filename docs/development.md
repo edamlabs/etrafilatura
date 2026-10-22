@@ -20,10 +20,15 @@ crates/native/src/lib.rs     the PyO3 bridge: functions, result classes, error m
 src/etrafilatura/            the trafilatura-compatible Python surface
   settings.py                use_config, Extractor, Document, settings.cfg keys
   core.py                    extract, bare_extraction, extract_with_metadata, renderers dispatch
-  metadata.py baseline.py downloads.py utils.py deduplication.py xml.py cli.py errors.py
+  metadata.py downloads.py cli.py errors.py utils.py
+  xml.py baseline.py htmlprocessing.py deduplication.py   vendored verbatim from trafilatura (NOTICE.md)
+  data/tei_corpus.dtd        the TEI DTD, from trafilatura
 tests/unit/etrafilatura/     mirror of src; tests/resources/html feeds units and the fidelity corpus
 tools/                       coverage.sh, apidiff.sh, health.py, fidelity.py
 ```
+
+The vendored modules are frozen upstream code: excluded from ruff/ty/coverage gates, exercised through the
+suite, and re-synced from trafilatura releases rather than edited.
 
 ## Make targets
 

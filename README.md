@@ -8,8 +8,9 @@
 
 **Python binding of [trafilatura-rs](https://github.com/nchapman/trafilatura-rs)** — the pure-Rust engine by
 [nchapman](https://github.com/nchapman) that extracts the main text, comments and metadata of web pages,
-stripping boilerplate. Same syntax as [trafilatura](https://github.com/adbar/trafilatura), a fraction of the
-dependencies: no lxml, no htmldate, no courlan — two small pure dependencies and a compiled engine. GIL released.
+stripping boilerplate. 100 % API-compatible with [trafilatura](https://github.com/adbar/trafilatura): same
+signatures, same lxml trees, same output bytes (its renderers are vendored verbatim) — on a compiled engine,
+with three dependencies instead of seven. GIL released.
 
 📖 **Documentation: <https://edamlabs.github.io/etrafilatura/>**
 

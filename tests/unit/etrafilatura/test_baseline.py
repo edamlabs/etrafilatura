@@ -1,49 +1,67 @@
-"""Baseline extraction and tag stripping."""
+"""Baseline extraction and tag stripping (vendored module)."""
 
-from etrafilatura.baseline import baseline, html2txt
-from etrafilatura.settings import Document
+from lxml.etree import _Element
+from lxml.html import fromstring
+
+from etrafilatura.baseline import baseline, block_text, html2txt
 
 
 def test_baseline_article(article: str) -> None:
-    document, text, length = baseline(article)
-    assert isinstance(document, Document)
+    tree, text, length = baseline(article)
+    assert isinstance(tree, _Element)
+    assert tree.tag == "body"
     assert "small tools" in text.lower()
     assert length == len(text)
-    assert "<p>" in document.body
 
 
 def test_baseline_empty_input() -> None:
-    document, text, length = baseline("")
-    assert isinstance(document, Document)
+    tree, text, length = baseline("")
+    assert tree.tag == "body"
     assert (text, length) == ("", 0)
 
 
-def test_baseline_unextractable() -> None:
-    document, text, length = baseline("<html><body></body></html>")
-    assert text == ""
-    assert length == 0
-    assert document.body == ""
+def test_baseline_json_ld() -> None:
+    body = (
+        "The full article text lives inside the JSON-LD payload of the page, "
+        "long enough to clear the minimum content length the baseline strategy applies."
+    )
+    page = (
+        '<html><body><script type="application/ld+json">{"@type": "Article", '
+        f'"articleBody": "{body}"}}</script>'
+        "</body></html>"
+    )
+    _tree, text, length = baseline(page)
+    assert "JSON-LD" in text
+    assert length == len(text)
 
 
-def test_baseline_title_only(empty_page: str) -> None:
-    _document, text, _length = baseline(empty_page)
-    ### The engine's own baseline fallback keeps the title as last-resort text.
-    assert text == "Empty"
+def test_baseline_element_input(article: str) -> None:
+    tree = fromstring(article)
+    _body, text, _length = baseline(tree)
+    assert "small tools" in text.lower()
+    assert tree.find(".//aside") is not None
 
 
-def test_baseline_html2txt_fallback(minimal_page: str) -> None:
-    document, text, _length = baseline(minimal_page)
-    assert text
-    assert isinstance(document.text, str)
-
-
-def test_baseline_html2txt_clean() -> None:
-    html = "<html><body><p>one</p>\n\n<p>two</p></body></html>"
+def test_baseline_html2txt() -> None:
+    html = "<html><body><p>one</p><script>evil()</script><p>two</p></body></html>"
     cleaned = html2txt(html)
     assert "one" in cleaned
-    assert "\n\n\n" not in cleaned
-    assert html2txt(html, clean=False)
+    assert "two" in cleaned
+    assert "evil" not in cleaned
+    raw = html2txt(html, clean=False)
+    assert "one" in raw
 
 
 def test_baseline_html2txt_empty() -> None:
     assert html2txt("") == ""
+
+
+def test_baseline_html2txt_no_body() -> None:
+    assert html2txt("<feed><entry>x</entry></feed>") == ""
+    tree = fromstring("<div><p>fragment content</p></div>")
+    assert "fragment content" in html2txt(tree)
+
+
+def test_baseline_block_text() -> None:
+    element = fromstring("<div><p>block</p><p>text</p></div>")
+    assert "block" in block_text(element)

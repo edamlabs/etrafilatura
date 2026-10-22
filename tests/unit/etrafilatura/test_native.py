@@ -112,12 +112,9 @@ def test_native_result_views() -> None:
         "<p>Second paragraph gives the page the volume of a genuine article body.</p>"
         "</article></body></html>"
     )
-    assert "First paragraph" in result.markdown
-    assert "<html" in result.readable_document.lower() or "<main" in result.readable_document.lower()
-    assert result.markdown_document
+    assert "First paragraph" in result.content_html
     assert result.comments_text == ""
     assert result.comments_html == ""
-    assert result.comments_markdown == ""
 
 
 def test_native_metadata_repr() -> None:
@@ -139,14 +136,3 @@ def test_native_extract_metadata_invalid() -> None:
         _native.extract_metadata_html(ARTICLE_MIN, date_mode="nope")  # ty: ignore[invalid-argument-type]
     with pytest.raises(ValueError, match="invalid url"):
         _native.extract_metadata_html(ARTICLE_MIN, url="::::")
-
-
-def test_native_html_to_text() -> None:
-    text = _native.html_to_text("<html><body><p>one</p><div>two<script>evil()</script></div></body></html>")
-    assert "one" in text
-    assert "two" in text
-    assert "evil" not in text
-
-
-def test_native_html_to_markdown() -> None:
-    assert "# H" in _native.html_to_markdown("<h1>H</h1>")

@@ -13,10 +13,7 @@ use trafilatura::HtmlDateMode;
 use trafilatura::Metadata;
 use trafilatura::Options;
 use trafilatura::TrafilaturaError;
-use trafilatura::create_markdown_document;
-use trafilatura::create_readable_document;
 use trafilatura::dom::Document;
-use trafilatura::dom::NodeId;
 use trafilatura::extract as rs_extract;
 use trafilatura::metadata::extract_metadata as rs_extract_metadata;
 
@@ -24,26 +21,22 @@ use trafilatura::metadata::extract_metadata as rs_extract_metadata;
 
 // The exception tree is Python (`etrafilatura.errors`); the engine only raises into it.
 pyo3::import_exception!(etrafilatura.errors, ExtractionError);
-pyo3::import_exception!(etrafilatura.errors, ParseError);
 pyo3::import_exception!(etrafilatura.errors, LanguageMismatchError);
 pyo3::import_exception!(etrafilatura.errors, InsufficientContentError);
 pyo3::import_exception!(etrafilatura.errors, MissingMetadataError);
-pyo3::import_exception!(etrafilatura.errors, DuplicateContentError);
 pyo3::import_exception!(etrafilatura.errors, TreeTooLargeError);
 
 fn to_py_err(error: TrafilaturaError) -> PyErr {
     let message = error.to_string();
     match error {
-        TrafilaturaError::ParseError(_) => ParseError::new_err(message),
         TrafilaturaError::LanguageMismatch { expected, got } => {
             LanguageMismatchError::new_err((message, expected, got))
         }
         TrafilaturaError::InsufficientContent { .. } => InsufficientContentError::new_err(message),
         TrafilaturaError::MissingMetadata(_) => MissingMetadataError::new_err(message),
-        TrafilaturaError::DuplicateContent => DuplicateContentError::new_err(message),
         TrafilaturaError::TreeTooLarge(size) => TreeTooLargeError::new_err((message, size)),
-        TrafilaturaError::Io(source) => PyErr::from(source),
-        // The engine enum is `#[non_exhaustive]`: an unknown variant stays a root error.
+        // ParseError, DuplicateContent and Io are unreachable through the string API; the enum
+        // is `#[non_exhaustive]`, so anything else stays a root error.
         _ => ExtractionError::new_err(message),
     }
 }
@@ -145,30 +138,6 @@ impl ExtractionResult {
     #[getter]
     fn comments_html(&self) -> String {
         self.inner.comments_html.clone()
-    }
-
-    /// Main content rendered as Markdown.
-    #[getter]
-    fn markdown(&self) -> String {
-        self.inner.content_markdown()
-    }
-
-    /// Comments rendered as Markdown.
-    #[getter]
-    fn comments_markdown(&self) -> String {
-        self.inner.comments_markdown()
-    }
-
-    /// Complete, self-contained HTML document: metadata header, content and comments.
-    #[getter]
-    fn readable_document(&self) -> String {
-        create_readable_document(&self.inner)
-    }
-
-    /// Full document as Markdown with a YAML front matter, content and comments.
-    #[getter]
-    fn markdown_document(&self) -> String {
-        create_markdown_document(&self.inner)
     }
 
     /// Metadata extracted from the document.
@@ -356,90 +325,6 @@ fn extract_metadata_html(
     Ok(MetadataResult::build(&metadata))
 }
 
-// ##### TEXT #####
-
-const BLOCK_TAGS: &[&str] = &[
-    "address",
-    "article",
-    "aside",
-    "blockquote",
-    "br",
-    "caption",
-    "dd",
-    "div",
-    "dl",
-    "dt",
-    "figcaption",
-    "figure",
-    "footer",
-    "h1",
-    "h2",
-    "h3",
-    "h4",
-    "h5",
-    "h6",
-    "header",
-    "hr",
-    "li",
-    "main",
-    "nav",
-    "ol",
-    "p",
-    "pre",
-    "section",
-    "table",
-    "tbody",
-    "td",
-    "tfoot",
-    "th",
-    "thead",
-    "tr",
-    "ul",
-];
-
-const SKIP_TAGS: &[&str] = &["script", "style", "noscript", "template"];
-
-fn is_block(tag: &str) -> bool {
-    BLOCK_TAGS.contains(&tag)
-}
-
-fn walk_text(document: &Document, id: NodeId, out: &mut String) {
-    out.push_str(&document.text(id));
-    for child in document.children(id) {
-        let tag = document.tag_name(child);
-        if SKIP_TAGS.contains(&tag) {
-            continue;
-        }
-        let block = is_block(tag);
-        if block {
-            out.push('\n');
-        }
-        walk_text(document, child, out);
-        out.push_str(&document.tail(child));
-        if block {
-            out.push('\n');
-        }
-    }
-}
-
-/// Strip every tag and return the visible text of an HTML string, blocks on their own line.
-#[pyfunction]
-fn html_to_text(py: Python<'_>, html: String) -> PyResult<String> {
-    detach(py, move || {
-        let document = Document::parse(&html);
-        let root = document.body().unwrap_or_else(|| document.root());
-        let mut text = String::new();
-        walk_text(&document, root, &mut text);
-        text
-    })
-}
-
-/// Convert an HTML fragment to Markdown.
-#[pyfunction]
-fn html_to_markdown(py: Python<'_>, html: String) -> PyResult<String> {
-    detach(py, move || html2markdown::convert(&html))
-}
-
 // ##### MODULE #####
 
 /// The version of the trafilatura-rs engine compiled into this extension.
@@ -447,8 +332,6 @@ fn html_to_markdown(py: Python<'_>, html: String) -> PyResult<String> {
 fn _native(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(extract_html, m)?)?;
     m.add_function(wrap_pyfunction!(extract_metadata_html, m)?)?;
-    m.add_function(wrap_pyfunction!(html_to_text, m)?)?;
-    m.add_function(wrap_pyfunction!(html_to_markdown, m)?)?;
     m.add_class::<ExtractionResult>()?;
     m.add_class::<MetadataResult>()?;
     m.add("ENGINE_VERSION", env!("TRAFILATURA_ENGINE_VERSION"))?;
