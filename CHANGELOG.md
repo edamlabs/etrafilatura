@@ -21,6 +21,9 @@ All notable changes to this project are documented in this file.
 
 ### Added
 
+- Input resolution: `os.PathLike` inputs are read, and keyword-only `input_format="auto"` fetches an absolute
+  http(s) URL string (WHATWG-validated by the engine's `url` crate, `_native.absolute_url`) or reads a file path
+  string, capped at `MAX_FILE_SIZE`. The default `"html"` keeps trafilatura's behaviour.
 - Byte-parity goldens (`make parity`) and a unit test against them; known divergences are strict `xfail`s.
 - `make fidelity` scores byte-exact agreement per format next to token agreement.
 

@@ -30,6 +30,8 @@ from lxml.etree import _Element
 from lxml.html import HtmlElement, HTMLParser, fromstring
 from urllib3.response import HTTPResponse
 
+from etrafilatura import _native
+
 # response compression
 try:
     import brotli
@@ -534,7 +536,6 @@ def safe_relative_url(baseurl: str, url: str) -> str:
         return ""
 
 
-HTTP_SCHEMES: Final = frozenset({"http", "https"})
 DOMAIN_REGEX: Final = re.compile(
     r"(?:(?:f|ht)tp)s?://(?:[^/?#]{,63}\.)?([^/?#.]{4,63}\.[^/?#]{2,63}|\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}|[0-9a-f:]{16,})(?:/|$)"
 )
@@ -542,12 +543,8 @@ STRIP_PORT_REGEX: Final = re.compile(r"(?<=\D):\d+")
 
 
 def absolute_url(url: str | None) -> str | None:
-    "The URL when it is absolute http(s), None otherwise: the only base the engine accepts."
-    try:
-        parts = urlsplit(url or "")
-    except ValueError:
-        return None
-    return url if parts.scheme in HTTP_SCHEMES and parts.netloc else None
+    "The URL when the engine's WHATWG parser reads it as absolute http(s) with a host, None otherwise."
+    return url if url and _native.absolute_url(url) is not None else None
 
 
 def extract_domain(url: str) -> str | None:
