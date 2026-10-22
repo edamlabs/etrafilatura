@@ -8,13 +8,13 @@ from etrafilatura.downloads import fetch_url
 pytestmark = pytest.mark.integration
 
 
-def test_integration_live_extraction() -> None:
+def test_fetch_url_live() -> None:
     page = fetch_url("https://example.org/")
     assert page is not None
     assert "Example Domain" in page
 
 
-def test_integration_end_to_end() -> None:
+def test_extract_end_to_end() -> None:
     page = fetch_url("https://en.wikipedia.org/wiki/Web_scraping")
     if page is None:  # pragma: no cover - network-dependent
         pytest.skip("wikipedia unreachable")

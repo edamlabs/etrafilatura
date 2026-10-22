@@ -30,9 +30,9 @@ METHODS: Final[dict[str, Any]] = {
 }
 
 
-@pytest.mark.parametrize("library", sorted(LIBRARIES))
-@pytest.mark.parametrize("method", sorted(METHODS))
-@pytest.mark.parametrize("document", DOCUMENTS)
+@pytest.mark.parametrize("library", sorted(LIBRARIES), ids=sorted(LIBRARIES))
+@pytest.mark.parametrize("method", sorted(METHODS), ids=sorted(METHODS))
+@pytest.mark.parametrize("document", DOCUMENTS, ids=DOCUMENTS)
 def test_bench(benchmark: Any, library: str, method: str, document: str) -> None:
     """One (library, method, document) timing; pytest-benchmark calibrates the rounds."""
     html = (RESOURCES / f"{document}.html").read_text(encoding="utf-8")

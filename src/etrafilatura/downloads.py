@@ -13,7 +13,7 @@ import urllib3
 from etrafilatura.settings import DEFAULT_CONFIG, Extractor
 from etrafilatura.utils import MAX_FILE_SIZE, Response
 
-LOGGER = logging.getLogger(__package__)
+LOGGER = logging.getLogger(__name__)
 
 DEFAULT_HEADERS: Final = MappingProxyType(
     {
@@ -83,17 +83,24 @@ def _initiate_pool(config: ConfigParser, no_ssl: bool = False) -> urllib3.PoolMa
     return pool
 
 
+def _vet_host_blocked(host: str) -> ipaddress.IPv4Address | ipaddress.IPv6Address | None:
+    """The first non-public address the host resolves to, if any."""
+    addresses = (ipaddress.ip_address(info[4][0]) for info in socket.getaddrinfo(host, None))
+    return next(
+        (ip for ip in addresses if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved),
+        None,
+    )
+
+
 def _vet_host(url: str, config: ConfigParser) -> None:
     """Refuse non-public IP addresses when SSRF protection is on."""
     if not config.getboolean("DEFAULT", "SSRF_PROTECTION", fallback=True):
         return
-    host = urlparse(url).hostname
-    if host is None:
-        message = "no host in URL"
-        raise ValueError(message)
-    for info in socket.getaddrinfo(host, None):
-        ip = ipaddress.ip_address(info[4][0])
-        if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved:
+    match urlparse(url).hostname:
+        case None:
+            message = "no host in URL"
+            raise ValueError(message)
+        case str() as host if (ip := _vet_host_blocked(host)) is not None:
             message = f"blocked non-public IP address: {ip}"
             raise ValueError(message)
 
@@ -115,23 +122,26 @@ def _send_request(url: str, config: ConfigParser, *, no_ssl: bool) -> Response:
 
 def _is_suitable_response(url: str, response: Response, options: Extractor) -> bool:
     """Status, content type and size checks before handing the page to extraction."""
-    if response.status != HTTP_OK:
-        LOGGER.warning("not a 200 response: %s %s", response.status, url)
-        return False
     content_type = (response.headers or {}).get("content-type", "")
-    if content_type and not any(kind in content_type for kind in SUITABLE_TYPES):
-        LOGGER.warning("unfit content type: %s %s", content_type, url)
-        return False
-    if not response.data:
-        LOGGER.warning("no body: %s", url)
-        return False
-    if len(response.data) < options.min_file_size:
-        LOGGER.warning("too small: %s %s", len(response.data), url)
-        return False
-    if len(response.data) > options.max_file_size:
-        LOGGER.warning("too large: %s %s", len(response.data), url)
-        return False
-    return True
+    size = len(response.data or b"")
+    ### Rule table in precedence order: (failed, log message, log arguments); the first failure is logged.
+    rules = (
+        (response.status != HTTP_OK, "not a 200 response: %s %s", (response.status, url)),
+        (
+            bool(content_type) and not any(kind in content_type for kind in SUITABLE_TYPES),
+            "unfit content type: %s %s",
+            (content_type, url),
+        ),
+        (not response.data, "no body: %s", (url,)),
+        (size < options.min_file_size, "too small: %s %s", (size, url)),
+        (size > options.max_file_size, "too large: %s %s", (size, url)),
+    )
+    match next(((message, arguments) for failed, message, arguments in rules if failed), None):
+        case (str() as message, arguments):
+            LOGGER.warning(message, *arguments)
+            return False
+        case _:
+            return True
 
 
 def fetch_url(
@@ -164,7 +174,7 @@ def fetch_response(
     *,
     decode: bool = False,
     no_ssl: bool = False,
-    with_headers: bool = False,  # noqa: ARG001  # deprecated, kept for API compatibility
+    with_headers: bool = False,  # noqa: ARG001
     config: ConfigParser = DEFAULT_CONFIG,
 ) -> Response | None:
     """Download a web page and return a full response object.

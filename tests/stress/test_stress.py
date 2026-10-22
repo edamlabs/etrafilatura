@@ -1,7 +1,9 @@
 """Concurrency and volume: the GIL is released and the engine is reentrant."""
 
 import threading
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
+from configparser import ConfigParser
 
 import pytest
 
@@ -24,7 +26,7 @@ def _page(index: int) -> str:
     )
 
 
-def test_stress_threads(article: str) -> None:
+def test_extract_threads(article: str) -> None:
     """One page extracted concurrently from eight threads, identical results."""
     results: list[str | None] = [None] * 8
 
@@ -40,7 +42,7 @@ def test_stress_threads(article: str) -> None:
     assert len(set(results)) == 1
 
 
-def test_stress_volume() -> None:
+def test_extract_volume() -> None:
     """Two hundred distinct pages through a thread pool."""
     with ThreadPoolExecutor(max_workers=8) as pool:
         outputs = list(pool.map(lambda index: extract(_page(index)), range(200), timeout=300))
@@ -48,7 +50,7 @@ def test_stress_volume() -> None:
     assert all(output for output in outputs)
 
 
-def test_stress_mixed_formats(article: str) -> None:
+def test_extract_mixed_formats(article: str) -> None:
     """Every output format under contention."""
     formats = ("txt", "markdown", "xml", "json", "csv", "html", "xmltei")
     with ThreadPoolExecutor(max_workers=8) as pool:
@@ -58,11 +60,9 @@ def test_stress_mixed_formats(article: str) -> None:
     assert all(output for output in outputs)
 
 
-def test_stress_fetch_loop(server: str, make_config) -> None:  # type: ignore[no-untyped-def]
+def test_fetch_response_loop(server: str, make_config: Callable[..., ConfigParser]) -> None:
     """Repeated downloads against the local server."""
-    config = make_config(SSRF_PROTECTION="off")  # type: ignore[operator]
+    config = make_config(SSRF_PROTECTION="off")
     with ThreadPoolExecutor(max_workers=4) as pool:
-        responses = list(
-            pool.map(lambda _: fetch_response(f"{server}/article", config=config), range(20), timeout=120)  # type: ignore[arg-type]
-        )
+        responses = list(pool.map(lambda _: fetch_response(f"{server}/article", config=config), range(20), timeout=120))
     assert all(response is not None and response.status == 200 for response in responses)

@@ -3,8 +3,8 @@
 import argparse
 import logging
 import sys
+from configparser import ConfigParser
 from pathlib import Path
-from typing import Final
 
 from etrafilatura import ENGINE_VERSION, __version__
 from etrafilatura.core import extract
@@ -42,8 +42,8 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def _process(source: bytes | str, url: str | None, args: argparse.Namespace) -> str | None:
-    config = use_config(args.config) if args.config else use_config()
+def _main_extract(source: bytes | str, url: str | None, args: argparse.Namespace, config: ConfigParser) -> str | None:
+    """One document through `extract` with the command-line options."""
     return extract(
         source,
         url=url,
@@ -70,18 +70,17 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     if args.verbose:
         logging.basicConfig(level=logging.DEBUG)
-    sources: Final[list[tuple[bytes | str, str | None]]] = (
+    config = use_config(args.config)
+    sources: list[tuple[bytes | str, str | None]] = (
         [(b"", args.url)]
         if args.url
         else [(Path(path).read_bytes(), None) for path in args.inputs] or [(sys.stdin.read(), None)]
     )
-    outputs = 0
-    for source, url in sources:
-        content: bytes | str | None = fetch_url(url) if url else source
-        if content is None:
-            continue
-        result = _process(content, url, args)
-        if result:
-            sys.stdout.write(result.rstrip() + "\n")
-            outputs += 1
-    return 0 if outputs else 1
+    ### Lazy: each document is extracted and written before the next one is fetched.
+    results = (
+        _main_extract(content, url, args, config)
+        for source, url in sources
+        if (content := fetch_url(url) if url else source) is not None
+    )
+    written = [sys.stdout.write(result.rstrip() + "\n") for result in results if result]
+    return 0 if written else 1

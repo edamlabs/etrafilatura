@@ -13,9 +13,9 @@ and adds:
 | From trafilatura-rs | Added here |
 |---|---|
 | The extraction pipeline: content, comments, metadata, fallbacks | The trafilatura-compatible Python API and its module layout |
-| Language filtering, deduplication, prune selectors | Output renderers: XML, TEI, JSON, CSV, HTML, Markdown, YAML |
+| Language filtering | trafilatura's renderers (XML, TEI, JSON, CSV, HTML, Markdown), its tree vocabulary, its rescue, size and deduplication checks |
 | `Options` / `Config` tuning | `Extractor`, `Document`, `settings.cfg` compatibility |
-| Performance | Downloads (urllib3, retries, SSRF guard), CLI, GIL release |
+| Performance | Downloads (urllib3, retries, SSRF guard), URL and file input resolution, CLI, GIL release |
 
 Wrong extraction on a page → [trafilatura-rs issues](https://github.com/nchapman/trafilatura-rs/issues).
 Anything about the Python API → [ours](https://github.com/edamlabs/etrafilatura/issues).

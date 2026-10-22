@@ -2,7 +2,8 @@
 
 Declared `__init__` exception (tax-py-naming): the distribution's public surface is the package itself,
 `import etrafilatura as trafilatura; trafilatura.extract(...)`, a drop-in for trafilatura on the
-trafilatura-rs engine. This module re-exports the public names and nothing else.
+trafilatura-rs engine. This module holds the public re-exports, the library's `NullHandler` hook and the
+package metadata dunders, and nothing else (docs/decisions.md).
 """
 
 import logging

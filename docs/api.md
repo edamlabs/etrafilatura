@@ -1,139 +1,237 @@
 # API
 
-```python
-import etrafilatura as trafilatura
-```
+Every public call keeps trafilatura's signature; etrafilatura only adds keyword-only arguments
+([Compatibility](compatibility.md)). The examples on this page run as doctests on every `make test`: the output
+shown is the output you get.
 
-Every public call mirrors trafilatura's signature. This page documents each one with its parameters and
-returns; the [compatibility map](compatibility.md) lists the known gaps.
+```pycon
+>>> import etrafilatura as trafilatura
+>>> html = """<html><head><title>Small tools win</title><meta name="author" content="Ada Lovelace">
+... <meta property="og:site_name" content="Example Blog"><link rel="canonical" href="https://example.org/small-tools"></head>
+... <body><nav><a href="/">Home</a> <a href="/about">About</a></nav>
+... <article><h1>Small tools win</h1>
+... <p>A tool that does one job is cheap to audit, cheap to replace, and composes with the rest through plain text.</p>
+... <p>Platforms accumulate switching costs until leaving them costs more than staying; small tools never do.</p>
+... <blockquote>Write programs that do one thing and do it well.</blockquote>
+... <ul><li>grep searches</li><li>sort orders</li></ul>
+... </article><footer>© 2026 Example Blog</footer></body></html>"""
+
+```
 
 ## extract
 
-```python
-trafilatura.extract(html, output_format="markdown", include_comments=False)
+```pycon
+>>> print(trafilatura.extract(html))
+Small tools win
+A tool that does one job is cheap to audit, cheap to replace, and composes with the rest through plain text.
+Platforms accumulate switching costs until leaving them costs more than staying; small tools never do.
+Write programs that do one thing and do it well.
+- grep searches
+- sort orders
+>>> print(trafilatura.extract(html, output_format="markdown", with_metadata=True))
+---
+title: Small tools win
+author: Ada Lovelace
+url: https://example.org/small-tools
+hostname: example.org
+sitename: Example Blog
+date: "2026-01-01"
+fingerprint: "25687d829efc2e43"
+---
+# Small tools win
+<BLANKLINE>
+A tool that does one job is cheap to audit, cheap to replace, and composes with the rest through plain text.
+<BLANKLINE>
+Platforms accumulate switching costs until leaving them costs more than staying; small tools never do.
+<BLANKLINE>
+Write programs that do one thing and do it well.
+<BLANKLINE>
+- grep searches
+- sort orders
+>>> trafilatura.extract("<html><body></body></html>") is None
+True
+
 ```
 
-Main function: extraction and conversion to the chosen output format.
-
-| Parameter | Type | Default | Meaning |
+| Parameter | Type | Default | Effect |
 |---|---|---|---|
-| `filecontent` | str \| bytes \| HtmlElement \| Response | — | The page |
-| `url` | str \| None | `None` | Original URL, resolves relative links |
-| `record_id` | str \| None | `None` | ID added to the metadata |
-| `fast` | bool | `False` | Skip backup (fallback) extraction |
-| `favor_precision` / `favor_recall` | bool | `False` | Extraction focus |
-| `include_comments` | bool | `True` | Extract comments separately |
-| `output_format` | str | `"txt"` | `csv`, `html`, `json`, `markdown`, `txt`, `xml`, `xmltei` |
-| `tei_validation` | bool | `False` | Validate TEI well-formedness |
-| `target_language` | str \| None | `None` | Discard other languages (ISO 639-1) |
-| `include_tables` / `include_images` / `include_links` | bool | `True` / `False` / `False` | Keep these elements |
-| `include_formatting` | bool \| None | `None` | Keep formatting; implied by `markdown` |
-| `deduplicate` | bool \| LRUCache | `False` | Segment and document deduplication |
-| `date_extraction_params` | dict \| None | `None` | Date search parameters (`extensive_search`) |
-| `with_metadata` / `only_with_metadata` | bool | `False` | Metadata in output / require date+title+url |
-| `url_blacklist` / `author_blacklist` | set[str] \| None | `None` | Discard filtered documents/authors |
-| `settingsfile` | str \| None | `None` | `settings.cfg` override |
-| `prune_xpath` | str \| list[str] \| None | `None` | XPath expression(s) pruned before extraction |
-| `config` / `options` | ConfigParser / Extractor | defaults | Direct configuration |
-| `input_format` *(etrafilatura, keyword-only)* | `"html"` \| `"auto"` | `"html"` | How a `str` input is read — see [Input resolution](#input-resolution) |
+| `filecontent` | `str` \| `bytes` \| `HtmlElement` \| `Response` \| `os.PathLike` | — | The page; a path is read from disk |
+| `url` | `str` \| `None` | `None` | Document URL: metadata fallback and base for relative links |
+| `record_id` | `str` \| `None` | `None` | `id` in the metadata |
+| `fast` | `bool` | `False` | Skip the fallback extractors |
+| `favor_precision` / `favor_recall` | `bool` | `False` | Less but surer text / more text when unsure |
+| `include_comments` | `bool` | `True` | Extract the comments section |
+| `output_format` | `str` | `"txt"` | `txt`, `markdown`, `json`, `xml`, `xmltei`, `csv`, `html` → [Outputs](outputs.md) |
+| `tei_validation` | `bool` | `False` | Validate `xmltei` against the TEI DTD |
+| `target_language` | `str` \| `None` | `None` | ISO 639-1 code; other languages return `None` |
+| `include_tables` / `include_images` / `include_links` | `bool` | `True` / `False` / `False` | Keep tables, images, link targets |
+| `include_formatting` | `bool` \| `None` | `None` | Keep bold, italics…; implied by `markdown` |
+| `deduplicate` | `bool` \| `LRUCache` | `False` | Drop repeated segments and documents |
+| `date_extraction_params` | `dict` \| `None` | `None` | `extensive_search`, `max_date` |
+| `with_metadata` / `only_with_metadata` | `bool` | `False` | Metadata in the output / require title, date and URL |
+| `url_blacklist` / `author_blacklist` | `set[str]` \| `None` | `None` | Reject URLs, drop authors |
+| `settingsfile` / `config` / `options` | `str` / `ConfigParser` / `Extractor` | defaults | Configuration → [Extractor](#extractor-use_config) |
+| `prune_xpath` | `str` \| `list[str]` \| `None` | `None` | XPath expressions removed before extraction |
+| `max_tree_size`, `no_fallback` | — | — | Deprecated, as in trafilatura |
+| `input_format` *(keyword-only, etrafilatura)* | `"html"` \| `"auto"` | `"html"` | → [Input resolution](#input-resolution) |
 
-Returns `str | None` — `None` on every rejection (wrong language, too little content, duplicate, blacklist…).
+Returns `str`, or `None` when the page is rejected: too little content, wrong language, duplicate, blacklisted URL.
+
+| Raises | When |
+|---|---|
+| `AttributeError` | Unknown `output_format` |
+| `ValueError` | `max_tree_size` passed, `output_format="python"`, unknown `input_format` |
+| `FileNotFoundError` | Missing `settingsfile`, or a path input that does not exist |
+| `DeprecationWarning` (warning) | `no_fallback` |
 
 ## bare_extraction
 
-Same parameters as `extract` (minus `record_id`, `tei_validation`, `settingsfile`; plus `as_dict`), with
-`output_format="python"` by default. Returns a [`Document`](#document) — `.text`, `.body` (lxml tree), `.comments`,
-`.commentsbody` (lxml tree), `.raw_text` and the metadata fields — a `dict` with `as_dict=True`, or `None`.
+```pycon
+>>> document = trafilatura.bare_extraction(html, with_metadata=True)
+>>> document.title, document.author, document.sitename
+('Small tools win', 'Ada Lovelace', 'Example Blog')
+>>> [child.tag for child in document.body]
+['head', 'p', 'p', 'quote', 'list']
+>>> list(document.as_dict())[:5]
+['title', 'author', 'url', 'hostname', 'description']
+
+```
+
+Same parameters as `extract` without `record_id`, `tei_validation` and `settingsfile`, plus `as_dict`
+(deprecated); `output_format` defaults to `"python"`. Returns a [`Document`](#document), or `None` on rejection.
+`.body` and `.commentsbody` are lxml trees in trafilatura's vocabulary (`head`, `p`, `quote`, `list`/`item`,
+`table`/`row`/`cell`, `hi`, `ref`). Raises as `extract`, plus a `DeprecationWarning` for `as_dict`.
 
 ## extract_with_metadata
 
-Same parameters as `extract` with `with_metadata` forced on. Returns a `Document` whose `.text` carries the
-rendered output, or `None`.
+```pycon
+>>> trafilatura.extract_with_metadata(html).url
+'https://example.org/small-tools'
+
+```
+
+Same parameters as `extract`, metadata always on. Returns a `Document` whose `.text` is the rendered output, or
+`None`.
+
+## extract_metadata
+
+```pycon
+>>> metadata = trafilatura.extract_metadata(html)
+>>> metadata.title, metadata.url, metadata.hostname, metadata.date
+('Small tools win', 'https://example.org/small-tools', 'example.org', '2026-01-01')
+
+```
+
+| Parameter | Type | Default | Effect |
+|---|---|---|---|
+| `filecontent` | as `extract` | — | The page |
+| `default_url` | `str` \| `None` | `None` | URL used when the page declares none |
+| `date_config` | `dict` \| `None` | `None` | `extensive_search`, `max_date` (also the `filedate`) |
+| `extensive` | `bool` | `True` | Extensive date search when `date_config` is not given |
+| `author_blacklist` | `set[str]` \| `None` | `None` | Authors to drop |
+| `input_format` *(keyword-only, etrafilatura)* | `"html"` \| `"auto"` | `"html"` | → [Input resolution](#input-resolution) |
+
+Returns a `Document`, empty when the input parses to nothing.
+
+| Raises | When |
+|---|---|
+| `TypeError` | Input of an unsupported type |
+| `ValueError` | Unknown `input_format` |
 
 ## Input resolution
 
-An etrafilatura extension on `extract`, `bare_extraction`, `extract_with_metadata` and `extract_metadata`. Without
-it the behaviour is trafilatura's: a string is HTML.
+etrafilatura's extension on `extract`, `bare_extraction`, `extract_with_metadata` and `extract_metadata`. The
+default keeps trafilatura's behaviour: a string is HTML.
 
-```python
-from pathlib import Path
+```pycon
+>>> import tempfile, pathlib
+>>> page = pathlib.Path(tempfile.mkdtemp()) / "page.html"
+>>> _ = page.write_text(html, encoding="utf-8")
+>>> trafilatura.extract(page) == trafilatura.extract(html)
+True
+>>> trafilatura.extract(str(page)) is None
+True
+>>> trafilatura.extract(str(page), input_format="auto") == trafilatura.extract(html)
+True
+>>> trafilatura.extract("https://example.org/article", input_format="auto")  # doctest: +SKIP
+'…'
 
-trafilatura.extract(Path("page.html"))                                # read from disk, any input_format
-trafilatura.extract("https://example.org/article", input_format="auto")  # fetched, then extracted
-trafilatura.extract("page.html", input_format="auto")                  # read from disk
-trafilatura.extract("https://example.org/article")                     # None: a URL string is not HTML
 ```
 
 | Input | `input_format="html"` (default) | `input_format="auto"` |
 |---|---|---|
 | `os.PathLike` | read (trafilatura: `TypeError`) | read |
-| `str`, absolute `http(s)` URL, one token (WHATWG parser of the engine) | HTML | `fetch_response` with the call's config — SSRF guard, size and type checks; the final URL becomes `url` unless given |
-| `str`, existing file path (≤ 4096 chars, one line, no `<`) | HTML | read |
-| any other `str`, `bytes`, lxml tree, `Response` | as trafilatura | as trafilatura |
+| `str`: absolute http(s) URL, one token, WHATWG-validated by the engine | HTML | fetched with `fetch_response` and the call's config (SSRF guard, size and type checks); the final URL becomes `url` unless one is given |
+| `str`: existing file path, ≤ 4096 chars, one line, no `<` | HTML | read |
+| anything else | as trafilatura | as trafilatura |
 
-Files are read up to `MAX_FILE_SIZE`; larger ones return `None`. A failed download returns `None`. Strings are
-resolved only on opt-in: guessing would fetch or read on behalf of a caller passing untrusted HTML.
-
-## extract_metadata
-
-```python
-document = trafilatura.extract_metadata(html, default_url="https://example.org/page")
-document.title, document.author, document.date, document.sitename
-```
-
-| Parameter | Type | Default |
-|---|---|---|
-| `filecontent` | str \| bytes \| HtmlElement \| Response | — |
-| `default_url` | str \| None | `None` |
-| `date_config` | dict \| None | `None` |
-| `extensive` | bool | `True` |
-| `author_blacklist` | set[str] \| None | `None` |
-
-Always returns a `Document` (empty when there is nothing to parse).
+Files are read up to `MAX_FILE_SIZE`; a larger file or a failed download returns `None`. Strings are resolved
+only on opt-in: guessing would fetch or read on behalf of a caller passing untrusted HTML.
 
 ## fetch_url · fetch_response · is_live_page
 
-```python
-page = trafilatura.fetch_url("https://example.org")
-response = trafilatura.fetch_response("https://example.org", decode=True)
+```pycon
+>>> trafilatura.fetch_url("https://example.org")  # doctest: +SKIP
+'<!doctype html>…'
+>>> trafilatura.fetch_url("not a url") is None
+True
+
 ```
 
-`fetch_url(url, no_ssl=False, config=DEFAULT_CONFIG, options=None) -> str | None` — downloads and decodes;
-returns `None` on failures and unsuitable responses (status, content type, size limits).
-`fetch_response(url, *, decode=False, no_ssl=False, config=DEFAULT_CONFIG) -> Response | None` — the full
-response object (`.status`, `.headers`, `.data`, `.html`). `is_live_page(url)` answers a HEAD probe.
+| Call | Returns |
+|---|---|
+| `fetch_url(url, no_ssl=False, config=DEFAULT_CONFIG, options=None)` | Decoded HTML `str`, or `None` |
+| `fetch_response(url, *, decode=False, no_ssl=False, with_headers=False, config=DEFAULT_CONFIG)` | `Response` (`.status`, `.url`, `.headers`, `.data`, `.html`), or `None` |
+| `etrafilatura.downloads.is_live_page(url)` | `bool` from a HEAD probe |
 
-Pooling, retries, timeouts, user agents, cookies, SSRF protection and the insecure-SSL fallback are configured
-through the same `settings.cfg` keys as trafilatura.
+`None` covers every failure: network, status, content type, `MIN_FILE_SIZE`/`MAX_FILE_SIZE`, and private
+addresses while `SSRF_PROTECTION` is on. Pools, retries, timeouts, user agents and cookies come from the same
+`settings.cfg` keys as trafilatura. `with_headers` is accepted and ignored, as in trafilatura.
 
 ## load_html · baseline · html2txt
 
-```python
-tree = trafilatura.load_html(b"...")        # bytes/str/Response → lxml HtmlElement (or None)
-tree, text, length = trafilatura.baseline(html)   # (lxml Element, str, int)
-trafilatura.html2txt(html)                  # tag stripping
+```pycon
+>>> trafilatura.load_html(html).tag
+'html'
+>>> body, text, length = trafilatura.baseline(html)
+>>> body.tag, length == len(text)
+('body', True)
+>>> trafilatura.html2txt("<html><body><p>One</p><p>Two</p></body></html>")
+'One Two'
+
 ```
+
+| Call | Returns | Raises |
+|---|---|---|
+| `load_html(htmlobject)` | lxml `HtmlElement`, or `None` when nothing parses | `TypeError` on unsupported input |
+| `baseline(filecontent)` | `(lxml body, text, length)`: trafilatura's last-resort extraction | `TypeError` |
+| `html2txt(content, clean=True)` | All the text of the page; `clean` drops scripts, styles and the like first | `TypeError` |
 
 ## Document
 
-`etrafilatura.settings.Document`: same slots and methods as trafilatura's (`as_dict()`, `from_dict()`,
-`clean_and_trim()`). `.body` and `.commentsbody` are lxml elements rooted at `<body>`, like trafilatura's.
+`etrafilatura.settings.Document`: trafilatura's slots in trafilatura's order (`title`, `author`, `url`,
+`hostname`, `description`, `sitename`, `date`, `categories`, `tags`, `fingerprint`, `id`, `license`, `body`,
+`comments`, `commentsbody`, `raw_text`, `text`, `language`, `image`, `pagetype`, `filedate`) and its methods
+`as_dict()`, `from_dict()`, `clean_and_trim()`.
 
 ## Extractor · use_config
 
-```python
-from etrafilatura.settings import Extractor, use_config
+```pycon
+>>> from etrafilatura.settings import Extractor, use_config
+>>> options = Extractor(config=use_config(), output_format="xml", recall=True)
+>>> options.focus, options.format
+('recall', 'xml')
+>>> trafilatura.extract(html, options=options).startswith("<doc")
+True
 
-config = use_config("my-settings.cfg")     # FileNotFoundError when missing
-options = Extractor(config=config, output_format="xml", recall=True, lang="en")
-trafilatura.extract(html, options=options)
 ```
 
-`Extractor` validates `output_format` (`AttributeError` otherwise), derives `focus`, `formatting` and
-`with_metadata` exactly like trafilatura's, and reads the size and deduplication thresholds from the config.
+`Extractor` validates `output_format` (`AttributeError`) and derives `focus`, `formatting` and `with_metadata`
+as trafilatura does; `use_config(path)` reads a `settings.cfg` (`FileNotFoundError` when missing) with
+trafilatura's keys.
 
 ## Native layer
 
-`etrafilatura.ENGINE_VERSION` is the trafilatura-rs release compiled in; `etrafilatura.__version__` is this
-package's own semver. The compiled module `etrafilatura._native` (`extract_html`,
-`extract_metadata_html`) is private; it is typed in `_native.pyi` and covered by the same suite.
+`etrafilatura.ENGINE_VERSION` is the trafilatura-rs release compiled in; `etrafilatura.__version__` this
+package's own version. `etrafilatura._native` (`extract_html`, `extract_metadata_html`, `absolute_url`) is
+private, typed in `_native.pyi`.

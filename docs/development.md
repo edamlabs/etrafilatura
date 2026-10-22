@@ -20,11 +20,14 @@ crates/native/src/lib.rs     the PyO3 bridge: functions, result classes, error m
 src/etrafilatura/            the trafilatura-compatible Python surface
   settings.py                use_config, Extractor, Document, settings.cfg keys
   core.py                    extract, bare_extraction, extract_with_metadata, renderers dispatch
+  engine.py                  NativeEngine: the engine call and the HTML → trafilatura-vocabulary conversion
+  source.py                  input_format: URL and file input resolution
   metadata.py downloads.py cli.py errors.py utils.py
   xml.py baseline.py htmlprocessing.py deduplication.py   vendored verbatim from trafilatura (NOTICE.md)
   data/tei_corpus.dtd        the TEI DTD, from trafilatura
 tests/unit/etrafilatura/     mirror of src; tests/resources/html feeds units and the fidelity corpus
-tools/                       coverage.sh, apidiff.sh, health.py, fidelity.py
+tests/resources/parity/      byte-parity goldens produced by Python trafilatura (make parity)
+tools/                       coverage.sh, apidiff.sh, health.py, fidelity.py, parity.py, benchchart.py
 ```
 
 The vendored modules are frozen upstream code: excluded from ruff/ty/coverage gates, exercised through the
@@ -38,6 +41,7 @@ suite, and re-synced from trafilatura releases rather than edited.
 | `make suite` | everything including stress and integration, one coverage gate |
 | `make cov` | Rust line coverage driven by the Python suite (gate 90 %) |
 | `make fidelity` | extraction agreement vs Python trafilatura (`ARGS=--update` rewrites the baseline) |
+| `make parity` | rewrite the byte-parity goldens from Python trafilatura |
 | `make benchmark` | pytest-benchmark vs Python trafilatura; regenerates `docs/benchmark.md` and its chart |
 | `make licenses` | regenerate `THIRD_PARTY_LICENSES.md` from the Rust dependency tree |
 | `make health` | dependency health report |
@@ -64,4 +68,5 @@ make integration   # live network calls
 ```
 
 Fixtures are plain files under `tests/resources/`; the download tests run against a local HTTP server, so the
-unit suite needs no network. The `bench` group installs Python trafilatura for the fidelity harness only.
+unit suite needs no network. The code examples in `docs/*.md` run as doctests in the same suite. The `bench`
+group installs Python trafilatura for `make fidelity`, `make parity` and `make benchmark`.

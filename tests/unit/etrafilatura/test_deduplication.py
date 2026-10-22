@@ -1,9 +1,10 @@
 """Deduplication primitives (vendored module): fingerprints, LRU cache, duplicate test."""
 
 import pickle
+from collections.abc import Callable
 
 import pytest
-from lxml.html import fragment_fromstring
+from lxml.html import HtmlElement
 
 from etrafilatura.deduplication import (
     LRU_TEST,
@@ -18,11 +19,7 @@ from etrafilatura.deduplication import (
 from etrafilatura.settings import Extractor
 
 
-def element_with(text: str):  # type: ignore[no-untyped-def]
-    return fragment_fromstring(f"<div><p>{text}</p></div>", create_parent="body")
-
-
-def test_deduplication_sample_tokens() -> None:
+def test_sample_tokens_lengths() -> None:
     tokens = sample_tokens(" ".join(f"word{i}" for i in range(300)))
     assert tokens
     assert all(len(token) > 4 for token in tokens)
@@ -31,7 +28,7 @@ def test_deduplication_sample_tokens() -> None:
     assert sample_tokens("... !!!") == []
 
 
-def test_deduplication_hash_and_fingerprint() -> None:
+def test_content_fingerprint_stable() -> None:
     digest = generate_bow_hash("some content", length=24)
     assert len(digest) == 24
     first = content_fingerprint("the same content everywhere in this document")
@@ -40,7 +37,7 @@ def test_deduplication_hash_and_fingerprint() -> None:
     assert all(char in "0123456789abcdef" for char in first)
 
 
-def test_deduplication_simhash_validate() -> None:
+def test_simhash_validate() -> None:
     fresh = Simhash("").hash
     assert Simhash("", existing_hash=42).hash == 42
     assert Simhash("", existing_hash="2a").hash == 42
@@ -50,12 +47,12 @@ def test_deduplication_simhash_validate() -> None:
     assert Simhash("some text here").similarity(Simhash("some text here")) == 1.0
 
 
-def test_deduplication_similar_domain() -> None:
+def test_is_similar_domain() -> None:
     assert is_similar_domain("example.org", "example.org") is True
     assert is_similar_domain("example.org", "totally-other.de") is False
 
 
-def test_deduplication_cache_operations() -> None:
+def test_lrucache_operations() -> None:
     cache = LRUCache(maxsize=2)
     assert cache.get("missing") == -1
     cache.put("a", 1)
@@ -70,12 +67,12 @@ def test_deduplication_cache_operations() -> None:
     assert bool(LRUCache()) is True
 
 
-def test_deduplication_cache_invalid_size() -> None:
+def test_lrucache_invalid_size() -> None:
     with pytest.raises(ValueError, match="at least 1"):
         LRUCache(maxsize=0)
 
 
-def test_deduplication_cache_pickling() -> None:
+def test_lrucache_pickling() -> None:
     cache = LRUCache(maxsize=4)
     cache.put("a", 1)
     restored = pickle.loads(pickle.dumps(cache))  # noqa: S301
@@ -84,23 +81,23 @@ def test_deduplication_cache_pickling() -> None:
     assert cache.get("b") == -1
 
 
-def test_deduplication_test_short_content() -> None:
+def test_duplicate_test_short_content(element_of: Callable[[str], HtmlElement]) -> None:
     options = Extractor(dedup=True)
-    assert duplicate_test(element_with("tiny"), options) is False
+    assert duplicate_test(element_of("tiny"), options) is False
 
 
-def test_deduplication_test_with_scoped_cache() -> None:
+def test_duplicate_test_scoped_cache(element_of: Callable[[str], HtmlElement]) -> None:
     cache = LRUCache(maxsize=8)
     options = Extractor(dedup=cache)
-    element = element_with(" ".join(f"token{i}" for i in range(200)))
+    element = element_of(" ".join(f"token{i}" for i in range(200)))
     assert duplicate_test(element, options) is False
     assert duplicate_test(element, options) is False
     assert duplicate_test(element, options) is False
     assert duplicate_test(element, options) is True
 
 
-def test_deduplication_test_with_global_cache() -> None:
+def test_duplicate_test_global_cache(element_of: Callable[[str], HtmlElement]) -> None:
     options = Extractor(dedup=True)
-    element = element_with(" ".join(f"global{i}" for i in range(200)))
+    element = element_of(" ".join(f"global{i}" for i in range(200)))
     assert duplicate_test(element, options) is False
     assert len(LRU_TEST.cache) == 1

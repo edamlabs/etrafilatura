@@ -8,9 +8,9 @@
 
 **Python binding of [trafilatura-rs](https://github.com/nchapman/trafilatura-rs)** — the pure-Rust engine by
 [nchapman](https://github.com/nchapman) that extracts the main text, comments and metadata of web pages,
-stripping boilerplate. 100 % API-compatible with [trafilatura](https://github.com/adbar/trafilatura): same
-signatures, same lxml trees, same output bytes (its renderers are vendored verbatim) — on a compiled engine,
-with three dependencies instead of seven. GIL released.
+stripping boilerplate, with [trafilatura](https://github.com/adbar/trafilatura)'s syntax: same signatures, same
+lxml trees in trafilatura's vocabulary, trafilatura's own renderers — on a compiled engine, with three
+dependencies instead of seven and the GIL released.
 
 📖 **Documentation: <https://edamlabs.github.io/etrafilatura/>**
 
@@ -27,17 +27,22 @@ trafilatura.extract(downloaded, output_format="markdown", with_metadata=True)
 trafilatura.extract(html_string)                       # 'txt' by default
 trafilatura.bare_extraction(html_string)               # Document with .text, .body, .comments…
 trafilatura.extract_metadata(html_string)              # title, author, date, sitename…
+
+trafilatura.extract("https://example.org/article", input_format="auto")   # extension: fetch, then extract
 ```
 
-**Benchmark** — pytest-benchmark medians against Python trafilatura over six documents (synthetic pages,
-PEP 8 and a Wikipedia article): 1.2–2.2× faster extraction on real pages, up to 6.5× on metadata;
-`html2txt`/`baseline` run the same vendored lxml code on both sides
+**Benchmark** — pytest-benchmark medians against Python trafilatura 2.3.1: on the two real pages (PEP 8,
+Wikipedia), 1.2–1.5× faster plain-text extraction, 1.6–2.1× with XML and metadata, 2.7–4.4× on metadata alone.
+Extraction on small synthetic pages, under a millisecond, weighs the Python-side tree conversion more: 0.6–2.9×.
+`html2txt` and `baseline` run the same vendored code on both sides and measure the noise: 0.9–1.2×
 ([full matrix and method](https://edamlabs.github.io/etrafilatura/benchmark/)).
 
 ![etrafilatura vs trafilatura](https://raw.githubusercontent.com/edamlabs/etrafilatura/main/docs/assets/benchmark.svg)
 
-**Extraction agreement** — token-level agreement with Python trafilatura's output on the same corpus:
-94 % (txt), 93.8 % (markdown), 97.5 % (metadata) ([method](https://edamlabs.github.io/etrafilatura/outputs/#fidelity)).
+**Agreement with trafilatura** — on the synthetic test pages, 64 of 84 format cases are byte-identical and the
+other 20 are declared differences (tags, TEI version). On the eight-page corpus, real pages included, word-token
+agreement is 99.5 % (txt) and 99.6 % (markdown); the real pages differ by the engine's content selection
+([method](https://edamlabs.github.io/etrafilatura/outputs/#fidelity), [map](https://edamlabs.github.io/etrafilatura/compatibility/)).
 
 | | |
 |---|---|

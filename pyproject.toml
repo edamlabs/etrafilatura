@@ -64,7 +64,7 @@ build = [
     "maturin>=1.10",
 ]
 docs = [
-    "mkdocs-material>=9.7",
+    "zensical>=0.0.71,<0.1",
 ]
 dev = [
     { include-group = "lint" },
@@ -135,8 +135,9 @@ error-on-warning = true
 
 [tool.pytest]
 minversion = "9.0"
-testpaths = ["tests"]
-addopts = ["--import-mode=importlib", "-ra", "-m", "not stress and not integration and not bench"]
+testpaths = ["tests", "docs"]
+addopts = ["--import-mode=importlib", "-ra", "-m", "not stress and not integration and not bench", "--doctest-glob=*.md"]
+doctest_optionflags = ["ELLIPSIS"]
 pythonpath = ["."]
 strict = true
 filterwarnings = ["error"]

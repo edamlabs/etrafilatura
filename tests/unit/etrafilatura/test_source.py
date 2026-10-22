@@ -1,5 +1,6 @@
 """Input resolution: input_format="auto" fetches URLs and reads paths; the default never does."""
 
+from collections.abc import Callable
 from configparser import ConfigParser
 from pathlib import Path
 
@@ -11,23 +12,6 @@ from etrafilatura.metadata import extract_metadata
 from etrafilatura.settings import Document, Extractor
 from etrafilatura.source import MAX_PATH_LENGTH, AutoSource
 from etrafilatura.utils import Response
-
-
-@pytest.fixture
-def open_config(make_config) -> ConfigParser:  # type: ignore[no-untyped-def]
-    """Config with the SSRF guard off: the test server is localhost."""
-    return make_config(SSRF_PROTECTION="off")  # type: ignore[operator]
-
-
-@pytest.fixture
-def no_fetch(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Any download attempt fails the test."""
-
-    def refuse(*args: object, **kwargs: object) -> None:
-        pytest.fail("fetched without opt-in")
-
-    monkeypatch.setattr(source, "fetch_response", refuse)
-
 
 ##### DEFAULT: TRAFILATURA'S BEHAVIOUR #####
 
@@ -48,10 +32,12 @@ def test_extract_path_object(tmp_path: Path, article: str) -> None:
     assert extract(page) == extract(article)
 
 
-def test_extract_path_too_large(tmp_path: Path, article: str, make_config, caplog: pytest.LogCaptureFixture) -> None:  # type: ignore[no-untyped-def]
+def test_extract_path_too_large(
+    tmp_path: Path, article: str, make_config: Callable[..., ConfigParser], caplog: pytest.LogCaptureFixture
+) -> None:
     page = tmp_path / "article.html"
     page.write_text(article, encoding="utf-8")
-    assert extract(page, config=make_config(MAX_FILE_SIZE="100")) is None  # type: ignore[operator]
+    assert extract(page, config=make_config(MAX_FILE_SIZE="100")) is None
     assert "file too large" in caplog.text
 
 
@@ -132,17 +118,17 @@ def test_extract_metadata_auto_url_refused() -> None:
 ##### BIND #####
 
 
-def test_bind_without_url() -> None:
+def test_autosource_bind_without_url() -> None:
     options = Extractor()
     assert AutoSource.bind(options, None) is options
 
 
-def test_bind_fetched_url() -> None:
+def test_autosource_bind_fetched_url() -> None:
     options = Extractor()
     bound = AutoSource.bind(options, "https://example.org/final")
     assert (bound.url, bound.source, options.url) == ("https://example.org/final", "https://example.org/final", None)
 
 
-def test_bind_caller_url() -> None:
+def test_autosource_bind_caller_url() -> None:
     options = Extractor(url="https://example.org/given")
     assert AutoSource.bind(options, "https://example.org/final") is options

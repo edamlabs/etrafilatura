@@ -68,10 +68,10 @@ dist:             ## build release wheels + sdist -> dist/
 	uv run maturin build --release --sdist --out dist
 
 docs:             ## build the documentation (strict, fails on broken links)
-	uv run mkdocs build --strict
+	uv run zensical build --strict --clean
 
 serve:            ## serve the documentation locally
-	uv run mkdocs serve -a 127.0.0.1:8000
+	uv run zensical serve -a 127.0.0.1:8000
 
 publish:          ## build and upload to PyPI
 	uv run maturin publish
