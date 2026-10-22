@@ -31,9 +31,10 @@ trafilatura.extract_metadata(html_string)              # title, author, date, si
 trafilatura.extract("https://example.org/article", input_format="auto")   # extension: fetch, then extract
 ```
 
-**Benchmark** — pytest-benchmark medians against Python trafilatura over six documents (synthetic pages,
-PEP 8 and a Wikipedia article): 1.2–2.2× faster extraction on real pages, up to 6.5× on metadata;
-`html2txt`/`baseline` run the same vendored lxml code on both sides
+**Benchmark** — pytest-benchmark medians against Python trafilatura 2.3.1: on the two real pages (PEP 8,
+Wikipedia), 1.2–1.5× faster plain-text extraction, 1.6–2.1× with XML and metadata, 2.7–4.4× on metadata alone.
+On small synthetic pages, under a millisecond, the Python-side tree conversion weighs more: 0.6–2.9×.
+`html2txt` and `baseline` run the same vendored code on both sides and measure the noise: 0.9–1.2×
 ([full matrix and method](https://edamlabs.github.io/etrafilatura/benchmark/)).
 
 ![etrafilatura vs trafilatura](https://raw.githubusercontent.com/edamlabs/etrafilatura/main/docs/assets/benchmark.svg)
