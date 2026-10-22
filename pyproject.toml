@@ -4,7 +4,7 @@ build-backend = "maturin"
 
 [project]
 name = "etrafilatura"
-version = "0.1.0"
+dynamic = ["version"]
 description = "Python binding of trafilatura-rs: web page main text, comments and metadata extraction at Rust speed, trafilatura-compatible syntax."
 readme = "README.md"
 requires-python = ">=3.12"
@@ -77,7 +77,7 @@ dev = [
 [tool.uv]
 required-version = ">=0.12"
 default-groups = ["dev"]
-cache-keys = [{ file = "pyproject.toml" }, { file = "Cargo.toml" }, { file = "Cargo.lock" }]
+cache-keys = [{ file = "pyproject.toml" }, { file = "Cargo.toml" }, { file = "Cargo.lock" }, { file = "crates/**/*.rs" }]
 
 [tool.maturin]
 manifest-path = "crates/native/Cargo.toml"

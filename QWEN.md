@@ -15,7 +15,7 @@ the workflow commits. Anything you change outside the allowlist below is discard
 | `src/etrafilatura/xml.py`, `baseline.py`, `htmlprocessing.py`, `deduplication.py` | **Vendored verbatim from Python trafilatura (Apache-2.0, NOTICE.md)**: renderers, baseline, Simhash. Do not rewrite; re-sync wholesale from a new trafilatura release when asked |
 | `src/etrafilatura/metadata.py`, `downloads.py`, `utils.py`, `cli.py` | The rest of the trafilatura-compatible surface |
 | `src/etrafilatura/__init__.py` | Re-exports only; add new public names to `__all__` |
-| `tests/unit/etrafilatura/` | Mirror of `src/etrafilatura/`; public behaviour in `test_core_*.py` |
+| `tests/unit/etrafilatura/` | Mirror of `src/etrafilatura/`; public behaviour in `test_core.py` |
 | `tests/resources/html/` | Page fixtures; also the fidelity corpus |
 | `docs/` | MkDocs site: `outputs.md`, `api.md`, `errors.md`, `compatibility.md` |
 | `CHANGELOG.md` | Keep a Changelog; you write under `## [Unreleased]` |
@@ -24,7 +24,9 @@ The engine source of the pinned version is in `~/.cargo/registry/src/*/trafilatu
 
 ## Allowlist
 
-You may modify only: `crates/native/src/`, `src/etrafilatura/`, `tests/`, `docs/`, `CHANGELOG.md`, `README.md`.
+You may modify only: `crates/native/src/`, `src/etrafilatura/`, `tests/`, `docs/` (except `docs/fidelity.json`, the
+regression baseline), `CHANGELOG.md`, `README.md`. A rename counts as a deletion plus an addition: both paths
+must be allowed.
 Never touch `.github/`, `Cargo.toml`, `Cargo.lock`, `pyproject.toml`, `uv.lock`, `QWEN.md` or any version number.
 
 ## Rules
@@ -53,7 +55,7 @@ Never touch `.github/`, `Cargo.toml`, `Cargo.lock`, `pyproject.toml`, `uv.lock`,
 ## Done means
 
 ```bash
-uv sync && SKIP=licenses,gitleaks uv run prek run --all-files && make test
+uv sync && SKIP=licenses,gitleaks uv run prek run --all-files && make build test
 ```
 
 passes: every prek hook (ruff, ty, tach, rustfmt, clippy, zizmor, mkdocs strict) and the unit suite at 100 %
