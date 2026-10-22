@@ -1,7 +1,9 @@
 """Configuration objects: use_config, Extractor, Document."""
 
 import logging
+from collections.abc import Callable
 from configparser import ConfigParser
+from pathlib import Path
 
 import pytest
 from lxml.etree import Element
@@ -21,7 +23,7 @@ from etrafilatura.settings import (
     use_config,
 )
 
-##### use_config #####
+##### USE_CONFIG #####
 
 
 def test_use_config_defaults() -> None:
@@ -36,7 +38,7 @@ def test_use_config_passthrough() -> None:
     assert use_config(config=config) is config
 
 
-def test_use_config_file(tmp_path) -> None:  # type: ignore[no-untyped-def]
+def test_use_config_file(tmp_path: Path) -> None:
     override = tmp_path / "custom.cfg"
     override.write_text("[DEFAULT]\nMIN_EXTRACTED_SIZE = 50\n", encoding="utf-8")
     config = use_config(str(override))
@@ -53,7 +55,7 @@ def test_extractor_config_none_falls_back() -> None:
     assert Extractor(config=None).config is DEFAULT_CONFIG
 
 
-##### Extractor #####
+##### EXTRACTOR #####
 
 
 def test_extractor_defaults() -> None:
@@ -106,18 +108,18 @@ def test_extractor_with_metadata_derived() -> None:
     assert Extractor(output_format="xmltei").with_metadata is True
 
 
-def test_extractor_source_and_thresholds(make_config) -> None:  # type: ignore[no-untyped-def]
-    config = make_config(MAX_TREE_SIZE="100000", MIN_FILE_SIZE="64")  # type: ignore[operator]
-    options = Extractor(config=config, url="https://example.org/page")  # type: ignore[arg-type]
+def test_extractor_source_and_thresholds(make_config: Callable[..., ConfigParser]) -> None:
+    config = make_config(MAX_TREE_SIZE="100000", MIN_FILE_SIZE="64")
+    options = Extractor(config=config, url="https://example.org/page")
     assert options.source == "https://example.org/page"
     assert options.max_tree_size == 100000
     assert options.min_file_size == 64
-    assert Extractor(config=config, source="src").source == "src"  # type: ignore[arg-type]
+    assert Extractor(config=config, source="src").source == "src"
 
 
-def test_extractor_max_tree_size_non_numeric(make_config) -> None:  # type: ignore[no-untyped-def]
-    config = make_config(MAX_TREE_SIZE="abc")  # type: ignore[operator]
-    assert Extractor(config=config).max_tree_size is None  # type: ignore[arg-type]
+def test_extractor_max_tree_size_non_numeric(make_config: Callable[..., ConfigParser]) -> None:
+    config = make_config(MAX_TREE_SIZE="abc")
+    assert Extractor(config=config).max_tree_size is None
 
 
 def test_extractor_dedup_instance() -> None:
@@ -125,7 +127,7 @@ def test_extractor_dedup_instance() -> None:
     assert Extractor(dedup=cache).dedup is cache
 
 
-##### Document #####
+##### DOCUMENT #####
 
 
 def test_document_defaults_and_as_dict() -> None:
@@ -164,7 +166,7 @@ def test_document_clean_and_trim_to_none() -> None:
     assert document.title is None
 
 
-##### helpers #####
+##### HELPERS #####
 
 
 def test_set_date_params() -> None:
