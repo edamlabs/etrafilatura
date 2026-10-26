@@ -4,6 +4,8 @@
 <p>Web page extraction at Rust speed, with trafilatura's syntax. The Python binding of <a href="https://github.com/nchapman/trafilatura-rs"><strong>trafilatura-rs</strong></a>, a pure-Rust engine by nchapman.</p>
 </div>
 
+An **EDamLabs binding**: a Python binding of a third-party engine that keeps its upstream's syntax and follows its releases ([EDamLabs families](https://github.com/edamlabs/esteward#identity)).
+
 ```bash
 pip install etrafilatura
 ```

@@ -39,6 +39,11 @@ Upstream = "https://github.com/nchapman/trafilatura-rs"
 [project.scripts]
 etrafilatura = "etrafilatura.cli:main"
 
+### What this repository is in EDamLabs' taxonomy (https://github.com/edamlabs/esteward#identity).
+[tool.edamlabs]
+kind = "lib"
+family = "binding"
+
 [dependency-groups]
 lint = [
     "ruff>=0.17.2",
