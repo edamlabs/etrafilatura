@@ -1,7 +1,8 @@
 # Self-maintenance
 
 The binding follows its dependencies — above all the engine — without a human in the loop for the routine
-cases. Five moving parts, all deterministic except the repair agent, which is gated and allowlisted.
+cases. Every moving part is deterministic except the repair agent, which is gated and allowlisted; routine
+updates merge themselves once every required check passes.
 
 ```mermaid
 flowchart LR
@@ -10,7 +11,7 @@ flowchart LR
     C -->|engine changed| U[upstream-context\nAPI diff + release notes]
     C -->|failure or new API| M[maintenance.yml\nQwen agent: fix or expose]
     M -->|commits, never merges| C
-    H[health.yml\nmonthly] -->|issue deps-health| I[(GitHub issue)]
+    E[esteward fleet\ndaily] -->|status issue + one issue per incident| I[(GitHub issues)]
 ```
 
 ## Renovate
@@ -27,6 +28,10 @@ One config (`.github/renovate.json`), weekly unless stated:
 | Qwen CLI pin (`QWEN_CLI_VERSION` default in `maintenance.yml`) | one per release, regex manager | — |
 | GitHub actions | one grouped PR, monthly, pinned by digest | `tooling` |
 | `Cargo.lock` + `uv.lock` transitive refresh | lock file maintenance, monthly | — |
+
+**Merges itself** (GitHub auto-merge, after every required check): Python tooling, GitHub actions, lock file
+maintenance, the Qwen CLI pin, runtime patch releases. **Never merges itself**: the engine, `pyo3`/`url` and the
+reference trafilatura — they change behaviour, so CI, the parity goldens and the repair agent see them first.
 
 `requires-python` is never touched — it is a support promise.
 
@@ -67,11 +72,15 @@ Set at organisation level; the workflows read them, nothing is stored in the rep
 | `SM_MODEL` | variable | `maintenance.yml` | Model the agent runs on |
 | `QWEN_CLI_VERSION` | variable, optional | `maintenance.yml` | Version of the Qwen Code CLI (the agent, not the provider); defaults to the pin Renovate bumps |
 
-## health.yml
+## esteward
 
-Monthly, `tools/health.py` probes every direct dependency (crates.io, PyPI, GitHub): archived repositories,
-vanished packages, releases older than 18 months, no push in 12 months. Findings open (or refresh) one issue
-labelled `deps-health`; the issue closes itself when everything is healthy again.
+Dependency health and security are watched from outside by
+[esteward](https://github.com/edamlabs/esteward), the maintenance engine of EDamLabs, against
+[`fleet/etrafilatura.toml`](https://github.com/edamlabs/esteward/blob/main/fleet/etrafilatura.toml): every watched
+dependency (archived or dormant repository, PEP 792 registry status, release age, yanked release, license change),
+OSV advisories on every package of `uv.lock` and `Cargo.lock` (RustSec unmaintained notices included), and every
+action pinned by SHA. The verdicts land in one status issue (label `esteward`), rewritten on each daily run, and
+one issue per incident (label `esteward-escalation`) that closes itself when the incident clears.
 
 ## Releases
 

@@ -27,7 +27,7 @@ src/etrafilatura/            the trafilatura-compatible Python surface
   data/tei_corpus.dtd        the TEI DTD, from trafilatura
 tests/unit/etrafilatura/     mirror of src; tests/resources/html feeds units and the fidelity corpus
 tests/resources/parity/      byte-parity goldens produced by Python trafilatura (make parity)
-tools/                       coverage.sh, apidiff.sh, health.py, fidelity.py, parity.py, benchchart.py
+tools/                       coverage.sh, apidiff.sh, fidelity.py, parity.py, benchchart.py
 ```
 
 The vendored modules are frozen upstream code: excluded from ruff/ty/coverage gates, exercised through the
@@ -44,7 +44,6 @@ suite, and re-synced from trafilatura releases rather than edited.
 | `make parity` | rewrite the byte-parity goldens from Python trafilatura |
 | `make benchmark` | pytest-benchmark vs Python trafilatura; regenerates `docs/benchmark.md` and its chart |
 | `make licenses` | regenerate `THIRD_PARTY_LICENSES.md` from the Rust dependency tree |
-| `make health` | dependency health report |
 | `make apidiff OLD=x NEW=y` | engine public API diff between two crate versions |
 | `make dist` / `make publish` | release wheels + sdist / PyPI upload |
 | `make docs` / `make serve` | strict docs build / local server |

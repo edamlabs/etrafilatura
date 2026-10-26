@@ -201,3 +201,16 @@ examples are unaffected (they run in pytest, not in the site build).
 
 **Rejected.** Pinning `mkdocs<2` with Material 9.7 (frozen on a framework out of maintenance in two weeks);
 converting to `zensical.toml` now (no gain while `mkdocs.yml` is read; it can follow when Zensical stabilises).
+
+### 2026-10-26 · Routine updates merge themselves; health moves to esteward
+
+**Decision.** Renovate merges, through GitHub auto-merge after every required check, Python tooling, GitHub
+actions, lock file maintenance, the agent's CLI pin and runtime patch releases. The engine, `pyo3`/`url` and the
+reference trafilatura never merge themselves. `health.yml` and `tools/health.py` are removed: esteward's `deps`
+module covers them daily, with PEP 792 status, license changes and OSV advisories on top.
+
+**Evidence.** PRs #15 (Qwen CLI) and #16 (tooling) sat green waiting for a human; esteward has run
+etrafilatura daily since 2026-10-22 with one self-maintained status issue (#13).
+
+**Rejected.** Merging from esteward itself (Renovate already merges on the platform's own gate — the cheapest
+plane); keeping `health.yml` beside esteward (two reports of the same facts).
