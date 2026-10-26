@@ -12,6 +12,8 @@ stripping boilerplate, with [trafilatura](https://github.com/adbar/trafilatura)'
 lxml trees in trafilatura's vocabulary, trafilatura's own renderers — on a compiled engine, with three
 dependencies instead of seven and the GIL released.
 
+An **EDamLabs binding**: a Python binding of a third-party engine that keeps its upstream's syntax and follows its releases ([EDamLabs families](https://github.com/edamlabs/esteward#identity)).
+
 📖 **Documentation: <https://edamlabs.github.io/etrafilatura/>**
 
 ```bash
