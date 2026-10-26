@@ -1,38 +1,8 @@
 """Fixtures shared by the tools unit modules."""
 
-from collections.abc import Callable
-from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import pytest
-from tools.health import PulseHealth, RegistryHealth
-
-##### HEALTH #####
-
-
-@pytest.fixture
-def now() -> datetime:
-    """The evaluation instant of the health rules."""
-    return datetime(2026, 10, 15, tzinfo=UTC)
-
-
-@pytest.fixture
-def pulse_of(now: datetime) -> Callable[..., PulseHealth]:
-    """Builder of a healthy pulse, with field overrides."""
-
-    def _build(**overrides: Any) -> PulseHealth:
-        base: dict[str, Any] = {
-            "name": "trafilatura",
-            "registry": RegistryHealth.CRATES,
-            "released": now - timedelta(days=30),
-            "repository": "nchapman/trafilatura-rs",
-            "archived": False,
-            "pushed": now - timedelta(days=3),
-        }
-        return PulseHealth(**(base | overrides))
-
-    return _build
-
 
 ##### BENCHCHART #####
 

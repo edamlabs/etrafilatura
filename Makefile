@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help build build-release test lint format types arch check cargo-fmt clean dist stress integration suite publish docs serve cov licenses health apidiff fidelity parity benchmark
+.PHONY: help build build-release test lint format types arch check cargo-fmt clean dist stress integration suite publish docs serve cov licenses apidiff fidelity parity benchmark
 
 help:             ## list targets
 	@awk 'BEGIN{FS=":.*## "} /^[a-z][a-zA-Z0-9_-]*:.*##/ {printf "  \033[32m%-14s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -52,9 +52,6 @@ benchmark:        ## etrafilatura vs trafilatura timings -> docs/benchmark.md + 
 licenses:         ## regenerate THIRD_PARTY_LICENSES.md from the Rust dependency tree
 	cargo about generate about.hbs | tr -d "\r" > THIRD_PARTY_LICENSES.md
 
-health:           ## dependency health report (archived, stale, dormant)
-	uv run python tools/health.py --output health.md --token "$$(gh auth token 2>/dev/null)"
-
 apidiff:          ## engine public API diff: make apidiff OLD=0.4.0 NEW=0.5.0
 	tools/apidiff.sh trafilatura $(OLD) $(NEW) nchapman/trafilatura-rs upstream-context
 
@@ -62,7 +59,7 @@ cargo-fmt:        ## rustfmt the native crate
 	cargo fmt
 
 clean:            ## remove build artifacts
-	rm -rf target dist site .pytest_cache .ruff_cache htmlcov coverage.xml coverage.lcov .coverage health.md upstream-context bench.json .benchmarks
+	rm -rf target dist site .pytest_cache .ruff_cache htmlcov coverage.xml coverage.lcov .coverage upstream-context bench.json .benchmarks
 
 dist:             ## build release wheels + sdist -> dist/
 	uv run maturin build --release --sdist --out dist
