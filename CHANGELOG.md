@@ -6,6 +6,10 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+### Changed
+
+- README: badge layout, description and identity line standardized on the EDamLabs template.
+
 ## [0.1.0] - 2026-10-22
 
 First release: PyO3 binding of trafilatura-rs 0.5.0 with trafilatura 2.3's syntax.
