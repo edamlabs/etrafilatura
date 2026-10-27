@@ -237,6 +237,9 @@ bench.json
 qwen-artifacts/
 .ai-context/
 
+# task plans
+/.plans/
+
 # GitHub App credentials
 gha-creds-*.json
 health.md
