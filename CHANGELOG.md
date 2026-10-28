@@ -6,13 +6,15 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-28
+
 ### Added
 
-- `etrafilatura._native.html2txt`: the engine's block-aware text dump, new in trafilatura-rs 0.6.0 and the
+- `rtrafilatura._native.html2txt`: the engine's block-aware text dump, new in trafilatura-rs 0.6.0 and the
   measure its recall escalation compares an extraction against. Private and typed in `_native.pyi`; the public
   `html2txt` stays trafilatura's vendored implementation.
 - Docs site: `docs.yml` builds the Zensical site and deploys it to GitHub Pages from `main` behind the
-  `DOCS_DEPLOY` gate; live at <https://edamlabs.github.io/etrafilatura/> serving v0.1.0 (2026-10-27).
+  `DOCS_DEPLOY` gate; live at <https://edamlabs.github.io/rtrafilatura/> (2026-10-27).
 
 ### Changed
 
@@ -60,5 +62,6 @@ First release: PyO3 binding of trafilatura-rs 0.5.0 with trafilatura 2.3's synta
   grouped), changelog and license sync, upstream API diff, an agent that repairs or extends the binding on
   dependency updates within an allowlist, and a monthly dependency health check.
 
-[Unreleased]: https://github.com/edamlabs/etrafilatura/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/edamlabs/etrafilatura/releases/tag/v0.1.0
+[Unreleased]: https://github.com/edamlabs/rtrafilatura/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/edamlabs/rtrafilatura/compare/v0.1.0...v0.2.0
+[0.1.0]: https://github.com/edamlabs/rtrafilatura/releases/tag/v0.1.0
