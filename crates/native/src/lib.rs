@@ -15,6 +15,7 @@ use trafilatura::Options;
 use trafilatura::TrafilaturaError;
 use trafilatura::dom::Document;
 use trafilatura::extract as rs_extract;
+use trafilatura::html2txt as rs_html2txt;
 use trafilatura::metadata::extract_metadata as rs_extract_metadata;
 
 // ##### EXCEPTIONS #####
@@ -332,6 +333,16 @@ fn extract_metadata_html(
     Ok(MetadataResult::build(&metadata))
 }
 
+/// Text of an HTML string, spaced at block boundaries; empty when the input is not an HTML page.
+///
+/// The engine's own dump, which its recall escalation measures page coverage with. It always
+/// cleans (`script`, `style`, `aside`, `footer`, `svg`, `template`, `fencedframe`) and, unlike
+/// the vendored `etrafilatura.html2txt`, keeps cookie-consent banners and takes no lxml tree.
+#[pyfunction]
+fn html2txt(py: Python<'_>, html: String) -> PyResult<String> {
+    detach(py, move || rs_html2txt(&html))
+}
+
 /// The URL, parsed and serialized by the WHATWG `url` crate, when it is absolute `http(s)` with a host; else None.
 #[pyfunction]
 fn absolute_url(url: &str) -> Option<String> {
@@ -351,6 +362,7 @@ const ENGINE_VERSION: &str = env!("TRAFILATURA_ENGINE_VERSION");
 fn _native(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(extract_html, m)?)?;
     m.add_function(wrap_pyfunction!(extract_metadata_html, m)?)?;
+    m.add_function(wrap_pyfunction!(html2txt, m)?)?;
     m.add_function(wrap_pyfunction!(absolute_url, m)?)?;
     m.add_class::<ExtractionResult>()?;
     m.add_class::<MetadataResult>()?;

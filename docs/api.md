@@ -233,5 +233,10 @@ trafilatura's keys.
 ## Native layer
 
 `etrafilatura.ENGINE_VERSION` is the trafilatura-rs release compiled in; `etrafilatura.__version__` this
-package's own version. `etrafilatura._native` (`extract_html`, `extract_metadata_html`, `absolute_url`) is
-private, typed in `_native.pyi`.
+package's own version. `etrafilatura._native` (`extract_html`, `extract_metadata_html`, `html2txt`,
+`absolute_url`) is private, typed in `_native.pyi`.
+
+`_native.html2txt(html)` is the engine's own block-aware text dump, the measure its recall escalation
+compares an extraction against. It is not the public `html2txt`, which is trafilatura's vendored code: the
+engine's takes a string only, always cleans, and returns what its HTML parser hands it — cookie-consent
+banners, `<noscript>` content as markup text, soft hyphens dropped and text NFC-normalized.

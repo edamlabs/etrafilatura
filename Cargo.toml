@@ -10,7 +10,7 @@ repository = "https://github.com/edamlabs/etrafilatura"
 
 [workspace.dependencies]
 pyo3 = { version = "0.30.1", features = ["extension-module", "abi3-py312"] }
-trafilatura = { version = "=0.5.0", default-features = false, features = ["markdown"] }
+trafilatura = { version = "=0.6.0", default-features = false, features = ["markdown"] }
 url = "2"
 
 [profile.release]

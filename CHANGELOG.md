@@ -6,8 +6,15 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+### Added
+
+- `etrafilatura._native.html2txt`: the engine's block-aware text dump, new in trafilatura-rs 0.6.0 and the
+  measure its recall escalation compares an extraction against. Private and typed in `_native.pyi`; the public
+  `html2txt` stays trafilatura's vendored implementation.
+
 ### Changed
 
+- Engine: trafilatura-rs 0.6.0 ([release notes](https://github.com/nchapman/trafilatura-rs/releases/tag/v0.6.0)).
 - README: badge layout, description and identity line standardized on the EDamLabs template.
 
 ## [0.1.0] - 2026-10-22
