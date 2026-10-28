@@ -1061,9 +1061,9 @@ dependencies = [
 
 [[package]]
 name = "trafilatura"
-version = "0.5.0"
+version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7e1cfacc59a759e8d7c2ac51ac4046f309ab39b4ba2b4858a4d1d55aeb1c4b65"
+checksum = "939e0b721b81110ab7c91c5ba4e39697f367a3a61fbf7c0832f7e38c57972659"
 dependencies = [
  "chrono",
  "ego-tree",
