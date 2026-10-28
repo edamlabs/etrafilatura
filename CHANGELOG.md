@@ -15,6 +15,8 @@ All notable changes to this project are documented in this file. The format foll
 ### Changed
 
 - Engine: trafilatura-rs 0.6.0 ([release notes](https://github.com/nchapman/trafilatura-rs/releases/tag/v0.6.0)).
+- Compatibility: escaped text is no longer a divergence — the engine keeps it from 0.6.0 on, closing the
+  upstream report [nchapman/trafilatura-rs#13](https://github.com/nchapman/trafilatura-rs/issues/13).
 - README: badge layout, description and identity line standardized on the EDamLabs template.
 
 ## [0.1.0] - 2026-10-22
