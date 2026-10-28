@@ -35,7 +35,6 @@ engine, so content can differ page by page. This page says where, measured again
 | `hostname` | courlan with the public suffix list | courlan's fast rule; the full host when it does not apply | `www.bbc.co.uk` instead of `bbc.co.uk` |
 | Language detection | py3langid, when installed | whatlang, in the engine | Same `target_language` rejection, another detector |
 | TEI `<application>` | `Trafilatura 2.3.1` | etrafilatura's own version | Deliberate: naming trafilatura's release would be false |
-| Escaped text such as `&lt;b at c&gt;` | kept as text | lost: engine bug [trafilatura-rs#13](https://github.com/nchapman/trafilatura-rs/issues/13) | Rare; addresses written `&lt;name at host&gt;` |
 | Compressed input | gzip, zstd, brotli, deflate | the same, plus bz2, xz and zip | Extra formats only |
 | Downloads | urllib3 or pycurl | urllib3 | — |
 

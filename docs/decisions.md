@@ -214,3 +214,19 @@ etrafilatura daily since 2026-10-22 with one self-maintained status issue (#13).
 
 **Rejected.** Merging from esteward itself (Renovate already merges on the platform's own gate — the cheapest
 plane); keeping `health.yml` beside esteward (two reports of the same facts).
+
+### 2026-10-28 · Engine 0.6.0 closes #13; the Python-side gates stay, as the reference
+
+**Decision.** Bump the engine to trafilatura-rs 0.6.0 (PR #21) and expose its `html2txt` privately; public
+`html2txt` stays trafilatura's vendored implementation. The neutralised engine gates (`NEUTRAL_OPTIONS`) and the
+Python-side trafilatura 2.3.1 rescue, size, tree-size and duplicate checks stay. `compatibility.md` loses the
+"escaped text is lost" divergence: the engine keeps escaped text from 0.6.0 on.
+
+**Evidence.** nchapman fixed all three reproductions in 0.6.0 (crates.io, 2026-10-28) alongside a port of the
+upstream 2.2.x baseline rewrite; CI on #21 — goldens, fidelity, the 20 strict xfails, three OSes — passed with
+the Python-side layer untouched. The escaped-address case was re-measured against the 0.6.0 build before the
+divergence row was removed.
+
+**Rejected.** Retiring the neutralised gates now that upstream fixed the bugs: the engine ported the 2.2.x
+baseline, the parity reference is trafilatura 2.3.1 — a fixed second implementation is still a second
+implementation. Revisit when the engine ports the 2.3.x checks.
