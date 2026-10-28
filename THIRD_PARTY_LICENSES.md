@@ -445,7 +445,7 @@ Used by:
 
 Used by:
 
-- [trafilatura 0.5.0](https://github.com/nchapman/trafilatura-rs)
+- [trafilatura 0.6.0](https://github.com/nchapman/trafilatura-rs)
 
 ```text
                                  Apache License
