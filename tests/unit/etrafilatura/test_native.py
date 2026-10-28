@@ -16,6 +16,10 @@ ARTICLE_MIN = (
     "size the default configuration applies to extracted text segments.</p>"
     "</article></body></html>"
 )
+TEXT_PAGE = (
+    "<!DOCTYPE html><!-- <div>skipped</div> --><html><head><style>font-size: 8pt</style></head>"
+    "<body><script>evil()</script><p>First block.</p><p>Second block.</p><h2>Heading</h2>line<br>break</body></html>"
+)
 
 
 def test_engine_version_set() -> None:
@@ -136,3 +140,22 @@ def test_extract_metadata_html_invalid() -> None:
         _native.extract_metadata_html(ARTICLE_MIN, date_mode="nope")  # ty: ignore[invalid-argument-type]
     with pytest.raises(ValueError, match="invalid url"):
         _native.extract_metadata_html(ARTICLE_MIN, url="::::")
+
+
+def test_html2txt_blocks() -> None:
+    assert _native.html2txt(TEXT_PAGE) == "First block. Second block. Heading line break"
+    assert _native.html2txt("<html><body><div>a<p>b</p></div><p>Hyper<b>link</b></p></body></html>") == "a b Hyperlink"
+
+
+def test_html2txt_control_characters() -> None:
+    assert (
+        _native.html2txt("<html><body><p>before\u0001after visible text</p></body></html>")
+        == "beforeafter visible text"
+    )
+
+
+def test_html2txt_rejects_non_html() -> None:
+    assert _native.html2txt("") == ""
+    assert _native.html2txt("123") == ""
+    assert _native.html2txt("<html><body/></html>") == ""
+    assert _native.html2txt('<feed xmlns="http://www.w3.org/2005/Atom"><title>Feed title</title></feed>') == ""
