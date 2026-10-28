@@ -1,4 +1,4 @@
-"""Benchmarks: etrafilatura against Python trafilatura over the fixture corpus.
+"""Benchmarks: rtrafilatura against Python trafilatura over the fixture corpus.
 
 Run with `make benchmark`; results feed `tools/benchchart.py` (docs/benchmark.md).
 """
@@ -9,7 +9,7 @@ from typing import Any, Final
 import pytest
 import trafilatura
 
-import etrafilatura
+import rtrafilatura
 
 pytestmark = pytest.mark.bench
 
@@ -17,7 +17,7 @@ RESOURCES: Final = Path(__file__).resolve().parent.parent / "resources" / "html"
 
 DOCUMENTS: Final = ("minimal", "article", "comments", "tables", "real_pep8", "real_wikipedia")
 
-LIBRARIES: Final[dict[str, Any]] = {"etrafilatura": etrafilatura, "trafilatura": trafilatura}
+LIBRARIES: Final[dict[str, Any]] = {"rtrafilatura": rtrafilatura, "trafilatura": trafilatura}
 
 METHODS: Final[dict[str, Any]] = {
     "extract_txt": lambda lib, html: lib.extract(html),

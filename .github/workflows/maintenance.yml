@@ -20,7 +20,7 @@ concurrency:
 env:
   MAX_ATTEMPTS: 3
   # PCRE (grep -P): docs/fidelity.json and the parity goldens are regression baselines, never the agent's to move.
-  ALLOWED: ^(crates/native/src/|src/etrafilatura/|tests/(?!resources/parity/)|docs/(?!fidelity\.json$)|CHANGELOG\.md$|README\.md$)
+  ALLOWED: ^(crates/native/src/|src/rtrafilatura/|tests/(?!resources/parity/)|docs/(?!fidelity\.json$)|CHANGELOG\.md$|README\.md$)
 
 jobs:
   fix:

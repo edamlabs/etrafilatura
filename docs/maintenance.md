@@ -55,7 +55,7 @@ After CI on a Renovate branch, a Qwen agent (instructions in `QWEN.md`) runs in 
 - **expose** — CI passed but the engine's public Rust API gained items: expose them in Python.
 
 Guardrails: it edits files, the workflow commits — through an allowlist (`crates/native/src/`,
-`src/etrafilatura/`, `tests/` except the `tests/resources/parity/` goldens, `docs/` except the `docs/fidelity.json` baseline, changelog, readme); renames
+`src/rtrafilatura/`, `tests/` except the `tests/resources/parity/` goldens, `docs/` except the `docs/fidelity.json` baseline, changelog, readme); renames
 are checked on both paths. Edits outside it are discarded and reported on the PR. Maximum 3 attempts, then the
 PR is labelled `needs-human`. It never merges.
 
@@ -76,7 +76,7 @@ Set at organisation level; the workflows read them, nothing is stored in the rep
 
 Dependency health and security are watched from outside by
 [esteward](https://github.com/edamlabs/esteward), the maintenance engine of EDamLabs, against
-[`fleet/etrafilatura.toml`](https://github.com/edamlabs/esteward/blob/main/fleet/etrafilatura.toml): every watched
+[`fleet/rtrafilatura.toml`](https://github.com/edamlabs/esteward/blob/main/fleet/rtrafilatura.toml): every watched
 dependency (archived or dormant repository, PEP 792 registry status, release age, yanked release, license change),
 OSV advisories on every package of `uv.lock` and `Cargo.lock` (RustSec unmaintained notices included), and every
 action pinned by SHA. The verdicts land in one status issue (label `esteward`), rewritten on each daily run, and

@@ -3,7 +3,7 @@ requires = ["maturin>=1.15.0"]
 build-backend = "maturin"
 
 [project]
-name = "etrafilatura"
+name = "rtrafilatura"
 dynamic = ["version"]
 description = "Python binding of trafilatura-rs: web page main text, comments and metadata extraction at Rust speed, trafilatura-compatible syntax."
 readme = "README.md"
@@ -30,14 +30,14 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/edamlabs/etrafilatura"
-Documentation = "https://edamlabs.github.io/etrafilatura/"
-Source = "https://github.com/edamlabs/etrafilatura"
-Issues = "https://github.com/edamlabs/etrafilatura/issues"
+Homepage = "https://github.com/edamlabs/rtrafilatura"
+Documentation = "https://edamlabs.github.io/rtrafilatura/"
+Source = "https://github.com/edamlabs/rtrafilatura"
+Issues = "https://github.com/edamlabs/rtrafilatura/issues"
 Upstream = "https://github.com/nchapman/trafilatura-rs"
 
 [project.scripts]
-etrafilatura = "etrafilatura.cli:main"
+rtrafilatura = "rtrafilatura.cli:main"
 
 ### What this repository is in EDamLabs' taxonomy (https://github.com/edamlabs/esteward#identity).
 [tool.edamlabs]
@@ -87,7 +87,7 @@ cache-keys = [{ file = "pyproject.toml" }, { file = "Cargo.toml" }, { file = "Ca
 
 [tool.maturin]
 manifest-path = "crates/native/Cargo.toml"
-module-name = "etrafilatura._native"
+module-name = "rtrafilatura._native"
 python-source = "src"
 features = ["pyo3/extension-module"]
 
@@ -96,7 +96,7 @@ line-length = 120
 target-version = "py312"
 src = ["src", "tests"]
 # tests/resources: fixtures; the four vendored trafilatura modules are frozen upstream code (NOTICE.md).
-exclude = ["tests/resources", "src/etrafilatura/baseline.py", "src/etrafilatura/deduplication.py", "src/etrafilatura/htmlprocessing.py", "src/etrafilatura/xml.py"]
+exclude = ["tests/resources", "src/rtrafilatura/baseline.py", "src/rtrafilatura/deduplication.py", "src/rtrafilatura/htmlprocessing.py", "src/rtrafilatura/xml.py"]
 
 [tool.ruff.lint]
 select = [
@@ -110,17 +110,17 @@ ignore = ["E501", "ISC001", "PLR0913"]
 "tests/**" = ["S101", "PLR2004", "ARG", "FBT", "S318", "EM101", "EM102"]
 "tools/*.py" = ["S310", "PLR2004"]
 # The public surface mirrors trafilatura's positional-bool signatures verbatim: drop-in beats house style there.
-"src/etrafilatura/core.py" = ["FBT001", "FBT002", "FBT003", "PLR0917", "PLR0912", "PLR0915", "SIM905"]
-"src/etrafilatura/baseline.py" = ["FBT001", "FBT002"]
-"src/etrafilatura/downloads.py" = ["FBT001", "FBT002"]
-"src/etrafilatura/metadata.py" = ["FBT001", "FBT002"]
-"src/etrafilatura/settings.py" = ["FBT001", "FBT002"]
+"src/rtrafilatura/core.py" = ["FBT001", "FBT002", "FBT003", "PLR0917", "PLR0912", "PLR0915", "SIM905"]
+"src/rtrafilatura/baseline.py" = ["FBT001", "FBT002"]
+"src/rtrafilatura/downloads.py" = ["FBT001", "FBT002"]
+"src/rtrafilatura/metadata.py" = ["FBT001", "FBT002"]
+"src/rtrafilatura/settings.py" = ["FBT001", "FBT002"]
 # utils.py carries verbatim trafilatura helpers (NOTICE.md): their shape is the contract.
-"src/etrafilatura/utils.py" = ["FBT001", "FBT002", "FBT003", "EM101", "PLR2004", "SIM102", "SIM108", "BLE001"]
-"src/etrafilatura/xml.py" = ["FBT001", "FBT002", "S318"]
+"src/rtrafilatura/utils.py" = ["FBT001", "FBT002", "FBT003", "EM101", "PLR2004", "SIM102", "SIM108", "BLE001"]
+"src/rtrafilatura/xml.py" = ["FBT001", "FBT002", "S318"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["etrafilatura", "tests"]
+known-first-party = ["rtrafilatura", "tests"]
 
 [tool.ruff.lint.flake8-builtins]
 ignorelist = ["format", "license"]
@@ -133,7 +133,7 @@ python-version = "3.12"
 
 [tool.ty.src]
 include = ["src", "tests", "tools"]
-exclude = ["tests/resources", "src/etrafilatura/baseline.py", "src/etrafilatura/deduplication.py", "src/etrafilatura/htmlprocessing.py", "src/etrafilatura/xml.py"]
+exclude = ["tests/resources", "src/rtrafilatura/baseline.py", "src/rtrafilatura/deduplication.py", "src/rtrafilatura/htmlprocessing.py", "src/rtrafilatura/xml.py"]
 
 [tool.ty.terminal]
 error-on-warning = true
@@ -151,19 +151,19 @@ markers = [
     "slow: slow tests (deselect with -m 'not slow')",
     "stress: concurrency and volume stress (run via make stress)",
     "integration: live network calls (run via make integration)",
-    "bench: etrafilatura vs trafilatura benchmarks (run via make benchmark)",
+    "bench: rtrafilatura vs trafilatura benchmarks (run via make benchmark)",
 ]
 
 [tool.coverage.run]
-source_pkgs = ["etrafilatura"]
+source_pkgs = ["rtrafilatura"]
 branch = true
 parallel = true
 # vendored verbatim from trafilatura (Apache-2.0, NOTICE.md): exercised through the suite, tested upstream
 omit = [
-    "src/etrafilatura/xml.py",
-    "src/etrafilatura/baseline.py",
-    "src/etrafilatura/htmlprocessing.py",
-    "src/etrafilatura/deduplication.py",
+    "src/rtrafilatura/xml.py",
+    "src/rtrafilatura/baseline.py",
+    "src/rtrafilatura/htmlprocessing.py",
+    "src/rtrafilatura/deduplication.py",
 ]
 
 [tool.coverage.report]

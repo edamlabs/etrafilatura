@@ -1,8 +1,8 @@
-site_name: etrafilatura
+site_name: rtrafilatura
 site_description: Python binding of trafilatura-rs — web page extraction at Rust speed, trafilatura-compatible syntax.
-site_url: https://edamlabs.github.io/etrafilatura/
-repo_name: edamlabs/etrafilatura
-repo_url: https://github.com/edamlabs/etrafilatura
+site_url: https://edamlabs.github.io/rtrafilatura/
+repo_name: edamlabs/rtrafilatura
+repo_url: https://github.com/edamlabs/rtrafilatura
 edit_uri: edit/main/docs/
 copyright: MIT · binding &copy; 2026 EDamLabs · engine &copy; nchapman (Apache-2.0)
 
@@ -34,7 +34,7 @@ extra:
   generator: false
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/edamlabs/etrafilatura
+      link: https://github.com/edamlabs/rtrafilatura
     - icon: fontawesome/brands/rust
       link: https://github.com/nchapman/trafilatura-rs
 

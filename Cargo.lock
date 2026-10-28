@@ -181,15 +181,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "00d174d5400e5e8fd687ad1049e2f578285fa914201b1af7e8b112a4546bd826"
 
 [[package]]
-name = "etrafilatura-native"
-version = "0.1.0"
-dependencies = [
- "pyo3",
- "trafilatura",
- "url",
-]
-
-[[package]]
 name = "fastrand"
 version = "2.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -769,6 +760,15 @@ name = "regex-syntax"
 version = "0.8.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d6f6ff9a378485b298a5286656da665ba74413d36db0979633275d2e708145d4"
+
+[[package]]
+name = "rtrafilatura-native"
+version = "0.1.0"
+dependencies = [
+ "pyo3",
+ "trafilatura",
+ "url",
+]
 
 [[package]]
 name = "rustc-hash"

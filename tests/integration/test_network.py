@@ -2,8 +2,8 @@
 
 import pytest
 
-from etrafilatura.core import extract
-from etrafilatura.downloads import fetch_url
+from rtrafilatura.core import extract
+from rtrafilatura.downloads import fetch_url
 
 pytestmark = pytest.mark.integration
 

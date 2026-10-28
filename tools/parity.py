@@ -1,6 +1,6 @@
 """Byte-parity goldens: Python trafilatura's output for every synthetic page, format and metadata switch.
 
-`make parity` rewrites `tests/resources/parity/<page>.json`; the unit suite compares etrafilatura
+`make parity` rewrites `tests/resources/parity/<page>.json`; the unit suite compares rtrafilatura
 against them byte for byte. Needs the `bench` group: `uv run --group bench python -m tools.parity`.
 """
 

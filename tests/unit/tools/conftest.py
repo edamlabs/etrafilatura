@@ -19,7 +19,7 @@ def bench_payload() -> dict[str, Any]:
         "html2txt",
         "baseline",
     )
-    medians = {"etrafilatura": 0.001, "trafilatura": 0.004}
+    medians = {"rtrafilatura": 0.001, "trafilatura": 0.004}
     return {
         "machine_info": {"cpu": {"brand": "Test CPU"}, "python_implementation": "CPython"},
         "commit_info": {"id": "0123456789abcdef"},
