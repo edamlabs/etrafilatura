@@ -11,6 +11,8 @@ All notable changes to this project are documented in this file. The format foll
 - `etrafilatura._native.html2txt`: the engine's block-aware text dump, new in trafilatura-rs 0.6.0 and the
   measure its recall escalation compares an extraction against. Private and typed in `_native.pyi`; the public
   `html2txt` stays trafilatura's vendored implementation.
+- Docs site: `docs.yml` builds the Zensical site and deploys it to GitHub Pages from `main` behind the
+  `DOCS_DEPLOY` gate; live at <https://edamlabs.github.io/etrafilatura/> serving v0.1.0 (2026-10-27).
 
 ### Changed
 
