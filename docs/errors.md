@@ -3,7 +3,7 @@
 The public calls behave as trafilatura's: a rejected page is `None`, a wrong argument is a standard exception.
 
 ```pycon
->>> import etrafilatura as trafilatura
+>>> import rtrafilatura as trafilatura
 >>> page = "<html><body><article><p>" + "Ceci est une page en français, assez longue pour être extraite. " * 8 + "</p></article></body></html>"
 >>> trafilatura.extract(page, target_language="en") is None
 True
@@ -33,8 +33,8 @@ download failure.
 
 ## The native layer
 
-`etrafilatura.errors` holds the tree the compiled engine raises into, for callers of the private
-`etrafilatura._native`. Through the public calls only `LanguageMismatchError` occurs, caught and turned into `None`:
+`rtrafilatura.errors` holds the tree the compiled engine raises into, for callers of the private
+`rtrafilatura._native`. Through the public calls only `LanguageMismatchError` occurs, caught and turned into `None`:
 the other engine gates are switched off because trafilatura's checks run in Python.
 
 | Exception | `_native.extract_html` raises it when | Attributes |

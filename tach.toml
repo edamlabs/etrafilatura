@@ -1,7 +1,7 @@
 #  tach · architectural import contracts (Rust-backed) · CI: `tach check` (make arch)
 #  Layers mirror trafilatura's own module graph: settings/utils/errors (contracts)
 #  ← deduplication/xml/htmlprocessing (renderers) ← downloads/baseline/metadata (engines)
-#  ← core/cli (use cases) ← etrafilatura (public surface).
+#  ← core/cli (use cases) ← rtrafilatura (public surface).
 
 source_roots = ["src"]
 
@@ -17,98 +17,98 @@ root_module = "forbid"
 unused_ignore_directives = "error"
 
 [[modules]]
-path = "etrafilatura"
+path = "rtrafilatura"
 depends_on = [
-    "etrafilatura._native",
-    "etrafilatura.baseline",
-    "etrafilatura.core",
-    "etrafilatura.downloads",
-    "etrafilatura.metadata",
-    "etrafilatura.utils",
+    "rtrafilatura._native",
+    "rtrafilatura.baseline",
+    "rtrafilatura.core",
+    "rtrafilatura.downloads",
+    "rtrafilatura.metadata",
+    "rtrafilatura.utils",
 ]
 
 [[modules]]
-path = "etrafilatura._native"
+path = "rtrafilatura._native"
 depends_on = []
 
 [[modules]]
-path = "etrafilatura.errors"
+path = "rtrafilatura.errors"
 depends_on = []
 
 [[modules]]
-path = "etrafilatura.utils"
-depends_on = ["etrafilatura._native"]
+path = "rtrafilatura.utils"
+depends_on = ["rtrafilatura._native"]
 
 [[modules]]
-path = "etrafilatura.settings"
-depends_on = ["etrafilatura.utils"]
+path = "rtrafilatura.settings"
+depends_on = ["rtrafilatura.utils"]
 
 [[modules]]
-path = "etrafilatura.deduplication"
-depends_on = ["etrafilatura.settings", "etrafilatura.utils"]
+path = "rtrafilatura.deduplication"
+depends_on = ["rtrafilatura.settings", "rtrafilatura.utils"]
 
 [[modules]]
-path = "etrafilatura.xml"
-depends_on = ["etrafilatura.settings", "etrafilatura.utils"]
+path = "rtrafilatura.xml"
+depends_on = ["rtrafilatura.settings", "rtrafilatura.utils"]
 
 [[modules]]
-path = "etrafilatura.htmlprocessing"
-depends_on = ["etrafilatura.settings", "etrafilatura.utils", "etrafilatura.xml"]
+path = "rtrafilatura.htmlprocessing"
+depends_on = ["rtrafilatura.settings", "rtrafilatura.utils", "rtrafilatura.xml"]
 
 [[modules]]
-path = "etrafilatura.baseline"
+path = "rtrafilatura.baseline"
 depends_on = [
-    "etrafilatura.settings",
-    "etrafilatura.utils",
-    "etrafilatura.xml",
+    "rtrafilatura.settings",
+    "rtrafilatura.utils",
+    "rtrafilatura.xml",
 ]
 
 [[modules]]
-path = "etrafilatura.metadata"
+path = "rtrafilatura.metadata"
 depends_on = [
-    "etrafilatura._native",
-    "etrafilatura.settings",
-    "etrafilatura.source",
-    "etrafilatura.utils",
+    "rtrafilatura._native",
+    "rtrafilatura.settings",
+    "rtrafilatura.source",
+    "rtrafilatura.utils",
 ]
 
 [[modules]]
-path = "etrafilatura.downloads"
-depends_on = ["etrafilatura.settings", "etrafilatura.utils"]
+path = "rtrafilatura.downloads"
+depends_on = ["rtrafilatura.settings", "rtrafilatura.utils"]
 
 [[modules]]
-path = "etrafilatura.core"
+path = "rtrafilatura.core"
 depends_on = [
-    "etrafilatura.deduplication",
-    "etrafilatura.engine",
-    "etrafilatura.errors",
-    "etrafilatura.htmlprocessing",
-    "etrafilatura.metadata",
-    "etrafilatura.settings",
-    "etrafilatura.source",
-    "etrafilatura.utils",
-    "etrafilatura.xml",
+    "rtrafilatura.deduplication",
+    "rtrafilatura.engine",
+    "rtrafilatura.errors",
+    "rtrafilatura.htmlprocessing",
+    "rtrafilatura.metadata",
+    "rtrafilatura.settings",
+    "rtrafilatura.source",
+    "rtrafilatura.utils",
+    "rtrafilatura.xml",
 ]
 
 [[modules]]
-path = "etrafilatura.cli"
+path = "rtrafilatura.cli"
 depends_on = [
-    "etrafilatura",
-    "etrafilatura.core",
-    "etrafilatura.downloads",
-    "etrafilatura.settings",
+    "rtrafilatura",
+    "rtrafilatura.core",
+    "rtrafilatura.downloads",
+    "rtrafilatura.settings",
 ]
 
 [[modules]]
-path = "etrafilatura.engine"
+path = "rtrafilatura.engine"
 depends_on = [
-    "etrafilatura._native",
-    "etrafilatura.baseline",
-    "etrafilatura.htmlprocessing",
-    "etrafilatura.settings",
-    "etrafilatura.utils",
+    "rtrafilatura._native",
+    "rtrafilatura.baseline",
+    "rtrafilatura.htmlprocessing",
+    "rtrafilatura.settings",
+    "rtrafilatura.utils",
 ]
 
 [[modules]]
-path = "etrafilatura.source"
-depends_on = ["etrafilatura.downloads", "etrafilatura.settings", "etrafilatura.utils"]
+path = "rtrafilatura.source"
+depends_on = ["rtrafilatura.downloads", "rtrafilatura.settings", "rtrafilatura.utils"]

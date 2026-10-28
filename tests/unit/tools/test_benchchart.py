@@ -26,7 +26,7 @@ def test_pagebenchchart_table_speedups(bench_payload: dict[str, Any]) -> None:
 
 def test_pagebenchchart_table_missing_cell(bench_payload: dict[str, Any]) -> None:
     bench_payload["benchmarks"] = [
-        entry for entry in bench_payload["benchmarks"] if entry["params"]["library"] == "etrafilatura"
+        entry for entry in bench_payload["benchmarks"] if entry["params"]["library"] == "rtrafilatura"
     ]
     assert "| `baseline` | — | — |" in PageBenchchart(bench_payload).table()
 
@@ -49,6 +49,6 @@ def test_pagebenchchart_page_header(bench_payload: dict[str, Any]) -> None:
 def test_pagebenchchart_run_writes(bench_payload: dict[str, Any], tmp_path: Path) -> None:
     page, chart = tmp_path / "benchmark.md", tmp_path / "assets" / "benchmark.svg"
     summary = PageBenchchart(bench_payload).run(page=page, chart=chart)
-    assert summary.startswith("extract_txt corpus totals: etrafilatura 3 ms vs trafilatura 12 ms\n")
+    assert summary.startswith("extract_txt corpus totals: rtrafilatura 3 ms vs trafilatura 12 ms\n")
     assert page.read_text(encoding="utf-8").startswith("# Benchmark")
     assert chart.read_text(encoding="utf-8").startswith("<svg")

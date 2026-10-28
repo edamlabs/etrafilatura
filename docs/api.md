@@ -1,11 +1,11 @@
 # API
 
-Every public call keeps trafilatura's signature; etrafilatura only adds keyword-only arguments
+Every public call keeps trafilatura's signature; rtrafilatura only adds keyword-only arguments
 ([Compatibility](compatibility.md)). The examples on this page run as doctests on every `make test`: the output
 shown is the output you get.
 
 ```pycon
->>> import etrafilatura as trafilatura
+>>> import rtrafilatura as trafilatura
 >>> html = """<html><head><title>Small tools win</title><meta name="author" content="Ada Lovelace">
 ... <meta property="og:site_name" content="Example Blog"><link rel="canonical" href="https://example.org/small-tools"></head>
 ... <body><nav><a href="/">Home</a> <a href="/about">About</a></nav>
@@ -73,7 +73,7 @@ True
 | `settingsfile` / `config` / `options` | `str` / `ConfigParser` / `Extractor` | defaults | Configuration → [Extractor](#extractor-use_config) |
 | `prune_xpath` | `str` \| `list[str]` \| `None` | `None` | XPath expressions removed before extraction |
 | `max_tree_size`, `no_fallback` | — | — | Deprecated, as in trafilatura |
-| `input_format` *(keyword-only, etrafilatura)* | `"html"` \| `"auto"` | `"html"` | → [Input resolution](#input-resolution) |
+| `input_format` *(keyword-only, rtrafilatura)* | `"html"` \| `"auto"` | `"html"` | → [Input resolution](#input-resolution) |
 
 Returns `str`, or `None` when the page is rejected: too little content, wrong language, duplicate, blacklisted URL.
 
@@ -129,7 +129,7 @@ Same parameters as `extract`, metadata always on. Returns a `Document` whose `.t
 | `date_config` | `dict` \| `None` | `None` | `extensive_search`, `max_date` (also the `filedate`) |
 | `extensive` | `bool` | `True` | Extensive date search when `date_config` is not given |
 | `author_blacklist` | `set[str]` \| `None` | `None` | Authors to drop |
-| `input_format` *(keyword-only, etrafilatura)* | `"html"` \| `"auto"` | `"html"` | → [Input resolution](#input-resolution) |
+| `input_format` *(keyword-only, rtrafilatura)* | `"html"` \| `"auto"` | `"html"` | → [Input resolution](#input-resolution) |
 
 Returns a `Document`, empty when the input parses to nothing.
 
@@ -140,7 +140,7 @@ Returns a `Document`, empty when the input parses to nothing.
 
 ## Input resolution
 
-etrafilatura's extension on `extract`, `bare_extraction`, `extract_with_metadata` and `extract_metadata`. The
+rtrafilatura's extension on `extract`, `bare_extraction`, `extract_with_metadata` and `extract_metadata`. The
 default keeps trafilatura's behaviour: a string is HTML.
 
 ```pycon
@@ -182,7 +182,7 @@ True
 |---|---|
 | `fetch_url(url, no_ssl=False, config=DEFAULT_CONFIG, options=None)` | Decoded HTML `str`, or `None` |
 | `fetch_response(url, *, decode=False, no_ssl=False, with_headers=False, config=DEFAULT_CONFIG)` | `Response` (`.status`, `.url`, `.headers`, `.data`, `.html`), or `None` |
-| `etrafilatura.downloads.is_live_page(url)` | `bool` from a HEAD probe |
+| `rtrafilatura.downloads.is_live_page(url)` | `bool` from a HEAD probe |
 
 `None` covers every failure: network, status, content type, `MIN_FILE_SIZE`/`MAX_FILE_SIZE`, and private
 addresses while `SSRF_PROTECTION` is on. Pools, retries, timeouts, user agents and cookies come from the same
@@ -209,7 +209,7 @@ addresses while `SSRF_PROTECTION` is on. Pools, retries, timeouts, user agents a
 
 ## Document
 
-`etrafilatura.settings.Document`: trafilatura's slots in trafilatura's order (`title`, `author`, `url`,
+`rtrafilatura.settings.Document`: trafilatura's slots in trafilatura's order (`title`, `author`, `url`,
 `hostname`, `description`, `sitename`, `date`, `categories`, `tags`, `fingerprint`, `id`, `license`, `body`,
 `comments`, `commentsbody`, `raw_text`, `text`, `language`, `image`, `pagetype`, `filedate`) and its methods
 `as_dict()`, `from_dict()`, `clean_and_trim()`.
@@ -217,7 +217,7 @@ addresses while `SSRF_PROTECTION` is on. Pools, retries, timeouts, user agents a
 ## Extractor · use_config
 
 ```pycon
->>> from etrafilatura.settings import Extractor, use_config
+>>> from rtrafilatura.settings import Extractor, use_config
 >>> options = Extractor(config=use_config(), output_format="xml", recall=True)
 >>> options.focus, options.format
 ('recall', 'xml')
@@ -232,8 +232,8 @@ trafilatura's keys.
 
 ## Native layer
 
-`etrafilatura.ENGINE_VERSION` is the trafilatura-rs release compiled in; `etrafilatura.__version__` this
-package's own version. `etrafilatura._native` (`extract_html`, `extract_metadata_html`, `html2txt`,
+`rtrafilatura.ENGINE_VERSION` is the trafilatura-rs release compiled in; `rtrafilatura.__version__` this
+package's own version. `rtrafilatura._native` (`extract_html`, `extract_metadata_html`, `html2txt`,
 `absolute_url`) is private, typed in `_native.pyi`.
 
 `_native.html2txt(html)` is the engine's own block-aware text dump, the measure its recall escalation

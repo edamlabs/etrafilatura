@@ -20,12 +20,12 @@ use trafilatura::metadata::extract_metadata as rs_extract_metadata;
 
 // ##### EXCEPTIONS #####
 
-// The exception tree is Python (`etrafilatura.errors`); the engine only raises into it.
-pyo3::import_exception!(etrafilatura.errors, ExtractionError);
-pyo3::import_exception!(etrafilatura.errors, LanguageMismatchError);
-pyo3::import_exception!(etrafilatura.errors, InsufficientContentError);
-pyo3::import_exception!(etrafilatura.errors, MissingMetadataError);
-pyo3::import_exception!(etrafilatura.errors, TreeTooLargeError);
+// The exception tree is Python (`rtrafilatura.errors`); the engine only raises into it.
+pyo3::import_exception!(rtrafilatura.errors, ExtractionError);
+pyo3::import_exception!(rtrafilatura.errors, LanguageMismatchError);
+pyo3::import_exception!(rtrafilatura.errors, InsufficientContentError);
+pyo3::import_exception!(rtrafilatura.errors, MissingMetadataError);
+pyo3::import_exception!(rtrafilatura.errors, TreeTooLargeError);
 
 fn to_py_err(error: TrafilaturaError) -> PyErr {
     let message = error.to_string();
@@ -64,7 +64,7 @@ fn detach<T: Send>(py: Python<'_>, work: impl FnOnce() -> T + Send) -> PyResult<
 // ##### RESULTS #####
 
 /// Metadata extracted from the document via meta tags, JSON-LD and OpenGraph.
-#[pyclass(module = "etrafilatura._native", frozen, get_all)]
+#[pyclass(module = "rtrafilatura._native", frozen, get_all)]
 pub struct MetadataResult {
     title: String,
     author: String,
@@ -117,7 +117,7 @@ impl MetadataResult {
 }
 
 /// Outcome of one extraction: main text, comments, cleaned HTML and metadata.
-#[pyclass(module = "etrafilatura._native", frozen)]
+#[pyclass(module = "rtrafilatura._native", frozen)]
 pub struct ExtractionResult {
     inner: ExtractResult,
 }
@@ -337,7 +337,7 @@ fn extract_metadata_html(
 ///
 /// The engine's own dump, which its recall escalation measures page coverage with. It always
 /// cleans (`script`, `style`, `aside`, `footer`, `svg`, `template`, `fencedframe`) and, unlike
-/// the vendored `etrafilatura.html2txt`, keeps cookie-consent banners and takes no lxml tree.
+/// the vendored `rtrafilatura.html2txt`, keeps cookie-consent banners and takes no lxml tree.
 #[pyfunction]
 fn html2txt(py: Python<'_>, html: String) -> PyResult<String> {
     detach(py, move || rs_html2txt(&html))
@@ -357,7 +357,7 @@ fn absolute_url(url: &str) -> Option<String> {
 /// The version of the trafilatura-rs engine compiled into this extension.
 const ENGINE_VERSION: &str = env!("TRAFILATURA_ENGINE_VERSION");
 
-/// Private native bridge to the trafilatura-rs engine; use the public `etrafilatura` package.
+/// Private native bridge to the trafilatura-rs engine; use the public `rtrafilatura` package.
 #[pymodule]
 fn _native(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(extract_html, m)?)?;

@@ -3,5 +3,5 @@
 description = "Test fixtures and vendored data are captured upstream content, not secrets."
 paths = [
     '''tests/resources/''',
-    '''src/etrafilatura/data/''',
+    '''src/rtrafilatura/data/''',
 ]

@@ -45,7 +45,7 @@ fidelity:         ## extraction agreement vs Python trafilatura (ARGS=--update r
 parity:           ## rewrite the byte-parity goldens from Python trafilatura (tests/resources/parity)
 	uv run --group bench python -m tools.parity
 
-benchmark:        ## etrafilatura vs trafilatura timings -> docs/benchmark.md + chart
+benchmark:        ## rtrafilatura vs trafilatura timings -> docs/benchmark.md + chart
 	uv run --group bench pytest -m bench -q -p no:randomly -p no:cacheprovider --benchmark-json=bench.json
 	uv run --group bench python -m tools.benchchart bench.json
 

@@ -230,3 +230,18 @@ divergence row was removed.
 **Rejected.** Retiring the neutralised gates now that upstream fixed the bugs: the engine ported the 2.2.x
 baseline, the parity reference is trafilatura 2.3.1 — a fixed second implementation is still a second
 implementation. Revisit when the engine ports the 2.3.x checks.
+
+### 2026-10-28 · Project renamed to rtrafilatura
+
+**Decision.** Repository, library, crate and import path rename `etrafilatura` → `rtrafilatura`, decided by the
+owner. GitHub redirects; PyPI cannot rename — the new project is published fresh and the old one becomes a
+forwarding stub. No import-compat shim ships.
+
+**Evidence.** Measured surface: 335 occurrences over 71 tracked files, one case variant; two trees renamed, the
+rest sed, locks regenerated. v0.1.0 published six days earlier — external footprint is one upstream issue and no
+dependent users yet; the cheapest the rename will ever be. The drop-in contract survives the change:
+`import rtrafilatura as trafilatura`.
+
+**Rejected.** Keeping `e-` for family consistency (the prefix describes the org series, not this library, and the
+owner accepts the series break); shipping an `etrafilatura` compat module (two public surfaces for one library
+against a week of history — a clean break is cheaper).

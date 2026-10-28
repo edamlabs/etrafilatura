@@ -1,4 +1,4 @@
-# etrafilatura
+# rtrafilatura
 
 <div class="rx-hero" markdown>
 <p>Web page extraction at Rust speed, with trafilatura's syntax. The Python binding of <a href="https://github.com/nchapman/trafilatura-rs"><strong>trafilatura-rs</strong></a>, a pure-Rust engine by nchapman.</p>
@@ -7,11 +7,11 @@
 An **EDamLabs binding**: a Python binding of a third-party engine that keeps its upstream's syntax and follows its releases ([EDamLabs families](https://github.com/edamlabs/esteward#identity)).
 
 ```bash
-pip install etrafilatura
+pip install rtrafilatura
 ```
 
 ```python
-import etrafilatura as trafilatura   # drop-in syntax
+import rtrafilatura as trafilatura   # drop-in syntax
 
 downloaded = trafilatura.fetch_url("https://example.org/article")
 text = trafilatura.extract(downloaded, output_format="markdown", with_metadata=True)
@@ -58,4 +58,4 @@ gap-by-gap drop-in map → [Compatibility](compatibility.md)
     Extraction quality, heuristics and performance belong to [trafilatura-rs](https://github.com/nchapman/trafilatura-rs)
     (itself a port of [go-trafilatura](https://github.com/markusmobius/go-trafilatura)). Extraction issues are
     [upstream issues](https://github.com/nchapman/trafilatura-rs/issues); anything about the Python API is
-    [ours](https://github.com/edamlabs/etrafilatura/issues).
+    [ours](https://github.com/edamlabs/rtrafilatura/issues).

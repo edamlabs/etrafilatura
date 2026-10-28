@@ -1,5 +1,5 @@
 [package]
-name = "etrafilatura-native"
+name = "rtrafilatura-native"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

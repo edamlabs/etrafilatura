@@ -6,7 +6,7 @@
 - A Rust toolchain (`rustup`) — the extension compiles with maturin
 
 ```bash
-git clone https://github.com/edamlabs/etrafilatura && cd etrafilatura
+git clone https://github.com/edamlabs/rtrafilatura && cd rtrafilatura
 uv sync            # dev groups: lint, test, bench, build, docs
 make build         # compile the extension into the venv (debug)
 make test          # unit suite, 100 % coverage gate
@@ -17,7 +17,7 @@ uv run prek install
 
 ```
 crates/native/src/lib.rs     the PyO3 bridge: functions, result classes, error mapping
-src/etrafilatura/            the trafilatura-compatible Python surface
+src/rtrafilatura/            the trafilatura-compatible Python surface
   settings.py                use_config, Extractor, Document, settings.cfg keys
   core.py                    extract, bare_extraction, extract_with_metadata, renderers dispatch
   engine.py                  NativeEngine: the engine call and the HTML → trafilatura-vocabulary conversion
@@ -25,7 +25,7 @@ src/etrafilatura/            the trafilatura-compatible Python surface
   metadata.py downloads.py cli.py errors.py utils.py
   xml.py baseline.py htmlprocessing.py deduplication.py   vendored verbatim from trafilatura (NOTICE.md)
   data/tei_corpus.dtd        the TEI DTD, from trafilatura
-tests/unit/etrafilatura/     mirror of src; tests/resources/html feeds units and the fidelity corpus
+tests/unit/rtrafilatura/     mirror of src; tests/resources/html feeds units and the fidelity corpus
 tests/resources/parity/      byte-parity goldens produced by Python trafilatura (make parity)
 tools/                       coverage.sh, apidiff.sh, fidelity.py, parity.py, benchchart.py
 ```

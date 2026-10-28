@@ -3,7 +3,7 @@
 `extract(..., output_format=...)` renders the same extraction in seven formats, with trafilatura's own renderers.
 
 ```pycon
->>> import etrafilatura as trafilatura
+>>> import rtrafilatura as trafilatura
 >>> html = """<html><head><title>Small tools win</title></head><body><article><h1>Small tools win</h1>
 ... <p>A tool that does one job is cheap to audit, cheap to replace, and composes with the rest through plain text.</p>
 ... <p>Platforms accumulate switching costs until leaving them costs more than staying; small tools never do.</p>
@@ -58,7 +58,7 @@ The renderers are trafilatura's code, vendored verbatim; what can still differ i
 ## Fidelity
 
 `make fidelity` runs the fixture corpus (`tests/resources/html/`: six synthetic pages, PEP 8 and a Wikipedia
-article) through etrafilatura and Python trafilatura and scores, per page:
+article) through rtrafilatura and Python trafilatura and scores, per page:
 
 | Metric | Measures |
 |---|---|

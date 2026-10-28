@@ -11,8 +11,8 @@ from typing import Any, Final
 
 import pytest
 
-from etrafilatura.deduplication import LRU_TEST
-from etrafilatura.settings import use_config
+from rtrafilatura.deduplication import LRU_TEST
+from rtrafilatura.settings import use_config
 
 RESOURCES: Final = Path(__file__).parent / "resources"
 HTML_DIR: Final = RESOURCES / "html"

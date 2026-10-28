@@ -6,7 +6,7 @@ THRESHOLD="${1:-90}"
 
 ### The instrumented extension writes default_*.profraw wherever Python runs: always reinstall the normal build.
 ### The coverage build shares target/ and cargo ignores RUSTC_WRAPPER in fingerprints: clean the instrumented crate first or develop reuses it.
-trap 'cargo clean -p etrafilatura-native; uv run --no-sync maturin develop -q' EXIT
+trap 'cargo clean -p rtrafilatura-native; uv run --no-sync maturin develop -q' EXIT
 
 (
     eval "$(cargo llvm-cov show-env --sh)"

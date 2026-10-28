@@ -4,7 +4,7 @@
 <rect x="190" y="34" width="14" height="10" fill="#c9cbd1"/>
 <text x="210" y="43" font-family="sans-serif" font-size="11" fill="#555">trafilatura</text>
 <rect x="300" y="34" width="14" height="10" fill="#1b5e8f"/>
-<text x="320" y="43" font-family="sans-serif" font-size="11" fill="#555">etrafilatura</text>
+<text x="320" y="43" font-family="sans-serif" font-size="11" fill="#555">rtrafilatura</text>
 <text x="180" y="70" text-anchor="end" font-family="sans-serif" font-size="12" fill="#333">extract_txt</text>
 <rect x="190" y="58" width="520" height="15" rx="3" fill="#eceff2"/>
 <rect x="190" y="58" width="291" height="15" rx="3" fill="#c9cbd1"/>

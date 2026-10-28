@@ -1,4 +1,4 @@
-"""Extraction fidelity: a reference corpus through etrafilatura and through Python trafilatura, scored.
+"""Extraction fidelity: a reference corpus through rtrafilatura and through Python trafilatura, scored.
 
 `make fidelity` re-measures, compares against the committed baseline and refreshes the chart.
 Needs the `bench` group: `uv run --group bench python -m tools.fidelity [--update]`.
@@ -15,7 +15,7 @@ from typing import Final
 
 import trafilatura
 
-import etrafilatura
+import rtrafilatura
 
 ROOT: Final = Path(__file__).resolve().parent.parent
 CORPUS_DIR: Final = ROOT / "tests" / "resources" / "html"
@@ -32,7 +32,7 @@ type Scores = Mapping[str, Mapping[str, float | None]]
 
 
 class CorpusFidelity:
-    """Agreement of etrafilatura with Python trafilatura over the reference corpus."""
+    """Agreement of rtrafilatura with Python trafilatura over the reference corpus."""
 
     __slots__ = ()
 
@@ -43,18 +43,18 @@ class CorpusFidelity:
         """Agreement of one page, per text format and on metadata."""
         scores: dict[str, float | None] = {
             f"format:{name}": CorpusFidelity.agreement(
-                etrafilatura.extract(html, output_format=name),
+                rtrafilatura.extract(html, output_format=name),
                 trafilatura.extract(html, output_format=name),
             )
             for name in FORMATS
         }
         scores |= {
             f"exact:{name}": float(
-                etrafilatura.extract(html, output_format=name) == trafilatura.extract(html, output_format=name)
+                rtrafilatura.extract(html, output_format=name) == trafilatura.extract(html, output_format=name)
             )
             for name in EXACT_FORMATS
         }
-        ours = etrafilatura.extract_metadata(html)
+        ours = rtrafilatura.extract_metadata(html)
         theirs = trafilatura.extract_metadata(html)
         matches = sum(getattr(ours, field) == getattr(theirs, field) for field in META_FIELDS)
         scores["metadata"] = matches / len(META_FIELDS)
@@ -165,7 +165,7 @@ class CorpusFidelity:
             ),
             (
                 f'<text x="{left}" y="{height - 12}" font-family="sans-serif" font-size="11" fill="#777">'
-                f"corpus of {pages} pages · etrafilatura vs trafilatura · {note}</text>"
+                f"corpus of {pages} pages · rtrafilatura vs trafilatura · {note}</text>"
             ),
             "</svg>",
         )
